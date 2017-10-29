@@ -1,6 +1,6 @@
 % ML-Style System λlet,#
 :- op(600,xfx,[::,#]).
-:- op(650,yfx,[$,!,⊆,±]).
+:- op(650,yfx,[$,!,⊆]).
 :- op(600,xfx,[#,::]).
 :- op(920,xfx,[⟹,▷,⊢,⟹*,⟹,⟶,⟶*]).
 :- op(1200,xfx,[--]).
@@ -57,7 +57,7 @@ tsub(S,LMs,LMs_) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
 tsub(S,{LMs},{LMs_}) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
 tsub(S,∀(T,K,Q),∀(T,K_,Q_)) :- subtract(S,[_/T],S_),ksub(S_,K,K_),tsub(S_,Q,Q_).
 
-ksub(S,u,u).
+ksub(_,u,u).
 ksub(S,LQs,LQs_) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 ksub(S,{LQs},{LQs_}) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 
@@ -66,14 +66,14 @@ esub(_,X,X) :- x(X),!.
 esub(_,CB,CB) :- cb(CB),!.
 esub(S,λ(X,M),λ(X,M_)) :- !,subtract(S,[_/X],S_),esub(S_,M,M_).
 esub(S,(M1$M2),(M1_$M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
-esub(S,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>esub(S,M,M_),LMs,LMs_).
+esub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>esub(S,M,M_),LMs,LMs_).
 esub(S,(M#L),(M_#L)) :- !,esub(S,M,M_).
 esub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
 esub(S,{[L=M]},{[L=M_]}) :- esub(S,M,M_).
 esub(S,case(M,{LMs}),case(M_,{LMs_})) :- esub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>esub(S,Mi,Mi_),LMs,LMs_).
 
 msub(S,X,N_) :- x(X),member(N/X,S),msub(S,N,N_).
-msub(S,X,X) :- x(X).
+msub(_,X,X) :- x(X).
 msub(_,CB,CB) :- cb(CB).
 msub(S,λ(X:Q,M),λ(X:Q,M_)) :- subtract(S,[_/X],S_),msub(S_,M,M_).
 msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
@@ -96,6 +96,7 @@ mtsub(S,{[L=M]}:Q,{[L=M_]}:Q_) :- mtsub(S,M,M_),tsub(S,Q,Q_).
 mtsub(S,case(M,{LMs}),case(M_,{LMs_})) :- mtsub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>mtsub(S,Mi,Mi_),LMs,LMs_).
 mtsub(_,M,M).
 
+/*
 etsub(S,X,N_) :- member(N/X,S),!,etsub(S,N,N_).
 etsub(S,X,X) :- x(X),!.
 etsub(S,λ(X1,M),λ(X1,M_)) :- tsub(S,M,M_).
@@ -105,7 +106,7 @@ etsub(S,(M#L),(M_#L)) :- etsub(S,M,M_).
 etsub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- etsub(S,M1,M1_), etsub(S,M2,M2_).
 etsub(S,{[L=M]}:Q,{[L=M_]}:Q) :- etsub(S,M,M_).
 etsub(S,case(M,{LMs}),case(M_,{LMs_})) :- etsub(S,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>etsub(S,Mi,Mi_),LMs,LMs_).
-
+*/
 subE(S,E,E_) :- maplist(subE1(S),E,E_).
 subE1(S,(T1,T2),(T1_,T2_)) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
 subT(S,T,T_) :- maplist(subT1(S),T,T_).
@@ -173,10 +174,10 @@ cls(K, T, τ, (K0,τ_)) :- eftv(K, τ,τFTV), eftv(K, T, TFTV), subtract(τFTV, 
 % 3.4 Kinded Unification
 
 F1 ⊆ F2 :- intersection(F2,F1,F1_),length(F1,L),length(F1_,L).
-F1 ± F2 ⟹ F :-
+±(F1, F2, F) :-
   dom(F1,Dom1),dom(F2,Dom2),union(Dom1,Dom2,Dom),
   maplist([L,t]>>(member(L:t,F1);member(L:t,F2)),Dom,F).
-  
+
 dom(F,Dom) :- maplist([L:_,L]>>!,F,Dom).
 
 u(K,E,(K0,S)) :- u(E,K,[],[],(_, K0, S, _)).
@@ -195,7 +196,7 @@ u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
   member(t::u,K0), subtract(K0,[t::u],K),!,
   subE([τ/t],E,E_), ksub([τ/t],K,K_),
   ssub([τ/t],S,S1), union(S1,[τ/t],S_),
-  ssub([τ/t],SK,SK1), union(SK_,[u/t],SK_).
+  ssub([τ/t],SK,SK1), union(SK1,[u/t],SK_).
 %(iii) record
 u(([(t1,t2)|E],K0,S,SK) ⟹ (E_, K_, S_,SK_)) :-
   t(t1),t(t2),
@@ -203,7 +204,7 @@ u(([(t1,t2)|E],K0,S,SK) ⟹ (E_, K_, S_,SK_)) :-
   dom(F1,Dom1), dom(F2,Dom2), intersection(Dom1,Dom2,Dom12),
   maplist({F1,F2}/[l,(Ft1,Ft2)]>>(member(l:Ft1,F1),member(l:Ft2,F2)),Dom12,ED),
   union(E,ED,E1), subE([t2/t1],E1,E_),
-  ksub([t2/t1],K,K1),F1 ± F2 ⟹ F12,tsub([t2/t1],F12,F12_),union(K1,[(t2,F12_)],K_),
+  ksub([t2/t1],K,K1),'±'(F1, F2, F12),tsub([t2/t1],F12,F12_),union(K1,[(t2,F12_)],K_),
   ssub([t2/t1],S,S1), union(S1,[t2/t1],S_),
   ssub([t2/t1],SK,SK1), union(SK1,[F1/t1],SK_).
 %(iv) record2
@@ -227,7 +228,7 @@ u(([(t1,t2)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
   dom(F1,Dom1), dom(F2,Dom2), intersection(Dom1,Dom2,Dom12),
   maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom12,ED),
   union(E,ED,E1), subE([t2/t1],E1,E_),
-  ksub([t2/t1],K,K1), F1 ± F2 ⟹ F12, tsub([t2/t1],{F12},{F12_}), union(K1,[(t2,{F12_})],K_),
+  ksub([t2/t1],K,K1), ±(F1,F2, F12), tsub([t2/t1],{F12},{F12_}), union(K1,[(t2,{F12_})],K_),
   ssub([t2/t1],S,S1), union(S1,[t2/t1],S_),
   ssub([t2/t1],SK,SK1), union(SK1,[{F1}/t1],SK_).
 %(vii) variant2
@@ -254,13 +255,13 @@ u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
   \+member(t::_,K0),
   subE([τ/t],E,E_), ksub([τ/t],K0,K_),
   ssub([τ/t],S,S1), union(S1,[τ/t],S_),
-  ssub([τ/t],SK,SK1), union(SK_,[u/t],SK_).
+  ssub([τ/t],SK,SK1), union(SK1,[u/t],SK_).
 u(([(τ,t)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
   t(t),!,u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)).
 
-wk(K,T,I,(K,[],I,int)) :- i(I).
-wk(K,T,true,(K,[],true,bool)) :- !.
-wk(K,T,false,(K,[],false,bool)) :- !.
+wk(K,_,I,(K,[],I,int)) :- i(I).
+wk(K,_,true,(K,[],true,bool)) :- !.
+wk(K,_,false,(K,[],false,bool)) :- !.
 wk(K,T,x,(K_,[],x_,Sτ2)) :-
   x(x),
   member(x:Sτ, T),
@@ -278,7 +279,7 @@ wk(K,T,(E1$E2),(K3,S321,(M1_ $ M2_),t3)) :-
   union(S3,S2,S32), union(S32,S1,S321),
   mtsub(S32,M1,M1_), mtsub(S3,M2,M2_), tsub(S3,t,t3).
 
-wk(K,T,[],(K,[],[],[])).
+wk(K,_,[],(K,[],[],[])).
 wk(K,T,[L1=E1|LEs],(Kn,S_,[L1=M1|LMs],[L1:τ1|LTs])) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),
   subT(S1,T,T1),
@@ -305,7 +306,7 @@ wk(K,T,case(E0,{Les}), (Kn1,S_, case(M0_,{LMs_}),t0_)) :-
     (Ki,Ti,[Li=Mi|LMs1],[Li:ti|Lts1],[ti::u|K1],[(τi,ti)|Tts1],S)]>>(
     wk(Ki1,Ti1,Ei,(Ki,Si,Mi,τi)), subT(Si,Ti1,Ti),
     union(Si,S1,S),fresh(ti)
-  ),Les,(K0,T0,[],[],Kn,[],[]),(Kn,Tn,LMs,Lts,Kn_,Tts,S)),
+  ),Les,(K0,T0,[],[],Kn,[],[]),(Kn,_,LMs,Lts,Kn_,Tts,S)),
   maplist({t0,S}/[(τi,ti),(τi_,(t0->ti))]>>tsub(S,τi,τi_),Tts,Tts_),
   tsub(S,τ0,τ0_), union([(τ0_,{Lts})],Tts_,Tts2),
   u(Kn_,Tts2, (Kn1,Sn1)),union(Sn1,S,S_),
