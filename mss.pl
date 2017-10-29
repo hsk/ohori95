@@ -2,19 +2,10 @@
 :- op(600,xfx,[::,#]).
 :- op(650,yfx,[$,!,⊆]).
 :- op(600,xfx,[#,::]).
-:- op(920,xfx,[⟹,▷,⊢,⟹*,⟹,⟶,⟶*]).
+:- op(920,xfx,[⟹,⟹*,⟹,⟶,⟶*]).
 :- op(1200,xfx,[--]).
 :- use_module(rtg).
 term_expansion(A--B,B:-A).
-
-member_eq(X,[Y|_]) :- X == Y.
-member_eq(X,[_|Xs]) :- member_eq(X,Xs).
-union_eq([],Ys,Ys) :- !.
-union_eq([X|Xs],Ys,Zs) :- member_eq(X,Ys),!, union_eq(Xs,Ys,Zs).
-union_eq([X|Xs],Ys,[X|Zs]) :- union_eq(Xs,Ys,Zs).
-subtract_eq([],_,[]) :- !.
-subtract_eq([X|Xs],Ys,Zs) :- member_eq(X,Ys),!,subtract_eq(Xs,Ys,Zs).
-subtract_eq([X|Xs],Ys,[X|Zs]) :- subtract_eq(Xs,Ys,Zs).
 
 foldr(_,[],S,S) :- !. % 畳み込み
 foldr(F,[X|Xs],S,S_) :- foldr(F,Xs,S,S1),!,call(F,X,S1,S_),!.
@@ -38,14 +29,6 @@ cb ::= true | false | i.
 e ::= x | cb | λ(x,e) | (e $ e) | (let(x=e);e)
     | record(l=e) | e#l | modify(e,l,e)
     | {[l=e]} | case(e,variant(l=e)).
-
-% Kinding rules
-
-K ⊢     T :: LQs  :- member(T::LQ2s,K), intersection(LQ2s,LQs,LQs).
-_ ⊢  LQ2s :: LQs  :- intersection(LQ2s,LQs,LQs).
-K ⊢     T ::{LQs} :- member(T::{LQ2s},K), intersection(LQ2s,LQs,LQs).
-_ ⊢ {LQ2s}::{LQs} :- intersection(LQ2s,LQs,LQs).
-_ ⊢     _ :: u.
 
 % Substitutions
 
@@ -143,6 +126,7 @@ M ⟹* M_ :- ev(M) ⟹ ev(M1),!, M1 ⟹* M_.
 M ⟹* M.
 
 % Free Type variables
+:- begin_var_names(['^[τtxσk]'],['^(true|bool|int)$']).
 
 ftv(B,[]) :- b(B),!.
 ftv(X,[X]) :- x(X).
@@ -156,6 +140,8 @@ kftv(LQs,FTVs) :- foldl([_:M,FTV,FTV_]>>(ftv(M,FTVi),union(FTV,FTVi,FTV_)),LQs,[
 kftv({LQs},FTVs) :- foldl([_:M,FTV,FTV_]>>(ftv(M,FTVi),union(FTV,FTVi,FTV_)),LQs,[],FTVs).
 tftv(LQs,FTVs) :- foldl([_:M,FTV,FTV_]>>(ftv(M,FTVi),union(FTV,FTVi,FTV_)),LQs,[],FTVs).
 
+eftv(K,σ,EFTV) :- ftv(σ,FTV),member(σ::k,K),kftv(k,FTV2),union(FTV,FTV2,EFTV).
+eftv(_,σ,FTV) :- ftv(σ,FTV).
 
 % Type system
 reset :- bb_put(i,0).
@@ -165,11 +151,10 @@ foldxq((X,∀(T_,K,Q),Ks,S),(X_,Q_,[Si::K|Ks_],[Si/T_|S_])) :-
   fresh(Si),foldxq(((X$Si),Q,Ks,S),(X_,Q_,Ks_,S_)).
 foldxq((X,Q,Ks,S),(X,Q,Ks,S)).
 
-:- begin_var_names(['^[τtxσk]'],['^(true|bool|int)$']).
-eftv(K,σ,EFTV) :- ftv(σ,FTV),member(σ::k,K),kftv(k,FTV2),union(FTV,FTV2,EFTV).
-eftv(_,σ,FTV) :- ftv(σ,FTV).
-
-cls(K, T, τ, (K0,τ_)) :- eftv(K, τ,τFTV), eftv(K, T, TFTV), subtract(τFTV, TFTV, ts), findall((Ti::Ki),(member(Ti::Ki,K),member(Ti,ts)),K1), subtract(K,K1,K0),foldr([Ti::Ki,τi,∀(Ti,Ki,τi)]>>!,K1,τ,τ_).
+cls(K, T, τ, (K0,τ_)) :-
+  eftv(K, τ,τFTV), eftv(K, T, TFTV), subtract(τFTV, TFTV, ts),
+  findall((Ti::Ki),(member(Ti::Ki,K),member(Ti,ts)),K1),
+  subtract(K,K1,K0),foldr([Ti::Ki,τi,∀(Ti,Ki,τi)]>>!,K1,τ,τ_).
 
 % 3.4 Kinded Unification
 
@@ -248,7 +233,6 @@ u(([({F1},{F2})|E],K,S,SK) ⟹ (E_,K,S,SK)) :- list(l:q,F1),list(l:q,F2),
 %(ix) arr
 u(([((τ11->τ21),(τ12->τ22))|E],K,S,SK) ⟹ (E_,K,S,SK)) :-
   union(E,[(τ11,τ12),(τ21,τ22)],E_).
-
 u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
   t(t),
   ftv(τ,FTV), \+member(t,FTV),
@@ -259,6 +243,8 @@ u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
 u(([(τ,t)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
   t(t),!,u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)).
 
+% alorighm WK
+
 wk(K,_,I,(K,[],I,int)) :- i(I).
 wk(K,_,true,(K,[],true,bool)) :- !.
 wk(K,_,false,(K,[],false,bool)) :- !.
@@ -268,30 +254,25 @@ wk(K,T,x,(K_,[],x_,Sτ2)) :-
   foldxq((x,Sτ,[],[]),(x_,Sτ1,SKs,S)),
   foldr({S}/[(Si::Ki),(Si::Ki_)]>>ksub(S,Ki,Ki_),SKs,K,K_),
   tsub(S,Sτ1,Sτ2).
-
 wk(K,T,λ(x,E1), (K1,S1,λ(x:t_,M1),(t_->t1))) :-
   fresh(t), wk([t::u|K],[x:t|T],E1, (K1,S1,M1,t1)), tsub(S1,t,t_).
-
 wk(K,T,(E1$E2),(K3,S321,(M1_ $ M2_),t3)) :-
   wk(K,T,E1,(K1,S1,M1,σ1)), subT(S1,T,T1),
   wk(K1,T1,E2,(K2,S2,M2,σ2)), tsub(S2,σ1,σ1_),
   fresh(t), u(K2,[(σ1_,(σ2->t))],(K3,S3)),
   union(S3,S2,S32), union(S32,S1,S321),
   mtsub(S32,M1,M1_), mtsub(S3,M2,M2_), tsub(S3,t,t3).
-
 wk(K,_,[],(K,[],[],[])).
 wk(K,T,[L1=E1|LEs],(Kn,S_,[L1=M1|LMs],[L1:τ1|LTs])) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),
   subT(S1,T,T1),
   wk(K1,T1,LEs,(Kn,S,LMs,LTs)),
   union(S1,S,S_).
-
 wk(K,T,(E1#L),(K2,S,((M1_:t2_) # L),t1_)) :-
   wk(K,T,E1, (K1,S1,M1,τ1)),fresh(t1),fresh(t2),
   u([t1::u,t2::[L:t1]|K1],[(t2,τ1)],(K2,S2)),
   union(S2,S1,S), msub(S,M1,M1_),
   tsub(S,t1,t1_), tsub(S,t2,t2_).
-
 wk(K,T,modify(E1,L,E2),(K3,S321,modify(M1_:t2_,L,M2_),t2_)) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),subT(S1,T,T1),
   wk(K1,T1,E2,(K2,S2,M2,τ2)),
@@ -299,7 +280,6 @@ wk(K,T,modify(E1,L,E2),(K3,S321,modify(M1_:t2_,L,M2_),t2_)) :-
   u([t1::u,t2::[L:t1]|K2],[(t1,τ2),(t2,τ1_)],(K3,S3)),
   union(S3,S2,S32),union(S32,S1,S321),
   msub(S32,M1,M1_),tsub(S3,t2,t2_),msub(S3,M2,M2_).
-
 wk(K,T,case(E0,{Les}), (Kn1,S_, case(M0_,{LMs_}),t0_)) :-
   wk(K,T,E0,(K0,S0,M0,τ0)), subT(S0,T,T0), fresh(t0),
   foldr([Li=Ei,(Ki1,Ti1,LMs1,Lts1,K1,Tts1,S1),
@@ -312,10 +292,8 @@ wk(K,T,case(E0,{Les}), (Kn1,S_, case(M0_,{LMs_}),t0_)) :-
   u(Kn_,Tts2, (Kn1,Sn1)),union(Sn1,S,S_),
   tsub(Sn1,t0,t0_),msub(S_,M0,M0_),
   maplist({S}/[Li=Mi,Li=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
-
 wk(K,T,{[L=E1]},([t::{[L:τ1]}|K1],S1,({[L=M1]}:t),t)) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),fresh(t).
-
 wk(K,T,(let(X=E1);E2),(K2,S21,(let(X:σ1_=poly(M1_:σ1_)); M2),τ2)) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),subT(S1,T,T1),
   cls(K1,T1,τ1,(K1_,σ1)),

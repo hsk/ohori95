@@ -37,49 +37,42 @@ _ ⊢     _ :: u.
 
 % Substitutions
 
-tsub(S,M,M_) :- foldl(tsub1(S),S,M,M_),!.
-tsub1(S,N/X,X,N_) :- tsub(S,N,N_).
-tsub1(_,_/_,X1,X1) :- t(X1).
-tsub1(_,_/_,B,B) :- b(B).
-tsub1(S,N/X,(Q1->Q2),(Q1_->Q2_)) :- tsub1(S,N/X,Q1,Q1_),tsub1(S,N/X,Q2,Q2_).
-tsub1(S,N/X,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>tsub1(S,N/X,M,M_),LMs,LMs_).
-tsub1(S,N/X,{LMs},{LMs_}) :- maplist({S,N,X}/[L=M,L=M_]>>tsub1(S,N/X,M,M_),LMs,LMs_).
-tsub1(_,_/X,∀(X,K,Q),∀(X,K,Q)).
-tsub1(S,N/X,∀(T,K,Q),∀(T,K_,Q_)) :- ksub1(S,N/X,K,K_),tsub1(S,N/X,Q,Q_).
+tsub(S,X,N_) :- t(X),member(N/X,S),tsub(S,N,N_).
+tsub(_,X,X) :- t(X).
+tsub(_,B,B) :- b(B).
+tsub(S,(Q1->Q2),(Q1_->Q2_)) :- tsub(S,Q1,Q1_),tsub(S,Q2,Q2_).
+tsub(S,LMs,LMs_) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
+tsub(S,{LMs},{LMs_}) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
+tsub(S,∀(T,K,Q),∀(T,K_,Q_)) :- subtract(S,[_/T],S_),ksub(S_,K,K_),tsub(S_,Q,Q_).
 
-ksub(S,M,M_) :- foldl(ksub1(S),S,M,M_),!.
-ksub1(_,_/_,u,u).
-ksub1(S,N/X,LQs,LQs_) :- maplist({S,N,X}/[L:Q,L:Q_]>>tsub1(S,N/X,Q,Q_), LQs,LQs_).
-ksub1(S,N/X,{LQs},{LQs_}) :- maplist({S,N,X}/[L:Q,L:Q_]>>tsub1(S,N/X,Q,Q_), LQs,LQs_).
+ksub(_,u,u).
+ksub(S,LQs,LQs_) :- maplist({S}/[L:Q,L:Q_]>>tsub(S,Q,Q_), LQs,LQs_).
+ksub(S,{LQs},{LQs_}) :- maplist({S}/[L:Q,L:Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 
-msub(S,M,M_) :- foldl(msub1(S),S,M,M_),!.
-msub1(S,N/X,X,N_) :- msub(S,N,N_).
-msub1(_,_/_,X1,X1) :- x(X1).
-msub1(_,_/_,CB,CB) :- cb(CB).
-msub1(_,_/X,λ(X:Q,M),λ(X:Q,M)).
-msub1(S,N/X,λ(X1:Q,M),λ(X1:Q,M_)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,(M1$M2),(M1_$M2_)) :- m(M2),msub1(S,N/X,M1,M1_), msub1(S,N/X,M2,M2_).
-msub1(S,N/X,(M!Q),(M_!Q)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,λ(T::K,M),λ(T::K,M_)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>msub1(S,N/X,M,M_),LMs,LMs_).
-msub1(S,N/X,(M#L),(M_#L)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,modify(M1,L,M2),modify(M1_,L,M2_)) :- msub1(S,N/X,M1,M1_), msub1(S,N/X,M2,M2_).
-msub1(S,N/X,{[L=M]}:Q,{[L=M_]}:Q) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,case(M,{LMs}),case(M_,{LMs_})) :- msub1(S,N/X,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>msub1(S,N/X,Mi,Mi_),LMs,LMs_).
+msub(S,X,N_) :- x(X),member(N/X,S),!,msub(S,N,N_).
+msub(_,X,X) :- x(X),!.
+msub(_,CB,CB) :- cb(CB),!.
+msub(S,λ(X:Q,M),λ(X:Q,M_)) :- !,subtract(S,[_/X],S_),msub(S_,M,M_).
+msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
+msub(S,(M!Q),(M_!Q)) :- msub(S,M,M_).
+msub(S,λ(T::K,M),λ(T::K,M_)) :- msub(S,M,M_).
+msub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>msub(S,M,M_),LMs,LMs_).
+msub(S,(M#L),(M_#L)) :- msub(S,M,M_).
+msub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
+msub(S,{[L=M]}:Q,{[L=M_]}:Q) :- msub(S,M,M_).
+msub(S,case(M,{LMs}),case(M_,{LMs_})) :- msub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
 
-mtsub(S,M,M_) :- foldl(mtsub1(S),S,M,M_),!.
-mtsub1(S,N/X,X,N_) :- mtsub(S,N,N_).
-mtsub1(S,N/X,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub1(S,N/X,Q,Q_),mtsub1(S,N/X,M,M_).
-mtsub1(S,N/X,(M1$M2),(M1_$M2_)) :- m(M2),mtsub1(S,N/X,M1,M1_), mtsub1(S,N/X,M2,M2_).
-mtsub1(S,N/X,(M!Q),(M_!Q_)) :- mtsub1(S,N/X,M,M_), tsub1(S,N/X,Q,Q_).
-mtsub1(_,_/X,λ(X::K,M),λ(X::K,M)).
-mtsub1(S,N/X,λ(T::K,M),λ(T_::K_,M_)) :- tsub1(S,N/X,T,T_),ksub1(S,N/X,K,K_),mtsub1(S,N/X,M,M_).
-mtsub1(S,N/X,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>mtsub1(S,N/X,M,M_),LMs,LMs_).
-mtsub1(S,N/X,(M#L),(M_#L)) :- mtsub1(S,N/X,M,M_).
-mtsub1(S,N/X,modify(M1,L,M2),modify(M1_,L,M2_)) :- mtsub1(S,N/X,M1,M1_), mtsub1(S,N/X,M2,M2_).
-mtsub1(S,N/X,{[L=M]}:Q,{[L=M_]}:Q) :- mtsub1(S,N/X,M,M_).
-mtsub1(S,N/X,case(M,{LMs}),case(M_,{LMs_})) :- mtsub1(S,N/X,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>mtsub1(S,N/X,Mi,Mi_),LMs,LMs_).
-mtsub1(_,_/_,M,M).
+mtsub(S,X,N_) :- t(X),member(N/X,S),mtsub(S,N,N_).
+mtsub(S,λ(X:Q,M),λ(X:Q_,M_)) :- tsub(S,Q,Q_),mtsub(S,M,M_).
+mtsub(S,(M1$M2),(M1_$M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
+mtsub(S,(M!Q),(M_!Q_)) :- mtsub(S,M,M_), tsub(S,Q,Q_).
+mtsub(S,λ(T::K,M),λ(T_::K_,M_)) :- subtract(S,[_/T],S_),tsub(S_,T,T_),ksub(S_,K,K_),mtsub(S_,M,M_).
+mtsub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>mtsub(S,M,M_),LMs,LMs_).
+mtsub(S,(M#L),(M_#L)) :- mtsub(S,M,M_).
+mtsub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
+mtsub(S,{[L=M]}:Q,{[L=M_]}:Q) :- mtsub(S,M,M_).
+mtsub(S,case(M,{LMs}),case(M_,{LMs_})) :- mtsub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>mtsub(S,Mi,Mi_),LMs,LMs_).
+mtsub(_,M,M).
 
 % Reduction rules
 
