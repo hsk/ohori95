@@ -95,14 +95,12 @@ msub1(S,N/X,case(M,{LMs}),case(M_,{LMs_})) :- msub1(S,N/X,M,M_),maplist({S,N,X}/
 mtsub(S,M,M_) :- foldl(mtsub1(S),S,M,M_),!.
 mtsub1(S,N/X,X,N_) :- mtsub(S,N,N_).
 mtsub1(S,N/X,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub1(S,N/X,Q,Q_),mtsub1(S,N/X,M,M_).
-mtsub1(S,N/X,(M1$M2),(M1_$M2_)) :- m(M2),mtsub1(S,N/X,M1,M1_), mtsub1(S,N/X,M2,M2_).
+mtsub1(S,N/X,(M1$M2),(M1_$M2_)) :- mtsub1(S,N/X,M1,M1_), mtsub1(S,N/X,M2,M2_).
 mtsub1(S,N/X,(M!Q),(M_!Q_)) :- mtsub1(S,N/X,M,M_), tsub1(S,N/X,Q,Q_).
-mtsub1(_,_/X,λ(X::K,M),λ(X::K,M)).
-mtsub1(S,N/X,λ(T::K,M),λ(T_::K_,M_)) :- tsub1(S,N/X,T,T_),ksub1(S,N/X,K,K_),mtsub1(S,N/X,M,M_).
 mtsub1(S,N/X,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>mtsub1(S,N/X,M,M_),LMs,LMs_).
 mtsub1(S,N/X,(M#L),(M_#L)) :- mtsub1(S,N/X,M,M_).
 mtsub1(S,N/X,modify(M1,L,M2),modify(M1_,L,M2_)) :- mtsub1(S,N/X,M1,M1_), mtsub1(S,N/X,M2,M2_).
-mtsub1(S,N/X,{[L=M]}:Q,{[L=M_]}:Q) :- mtsub1(S,N/X,M,M_).
+mtsub1(S,N/X,{[L=M]}:Q,{[L=M_]}:Q_) :- mtsub1(S,N/X,M,M_),tsub1(S,N/X,Q,Q_).
 mtsub1(S,N/X,case(M,{LMs}),case(M_,{LMs_})) :- mtsub1(S,N/X,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>mtsub1(S,N/X,Mi,Mi_),LMs,LMs_).
 mtsub1(_,_/_,M,M).
 
@@ -121,6 +119,8 @@ subE(S,E,E_) :- maplist(subE1(S),E,E_).
 subE1(S,(T1,T2),(T1_,T2_)) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
 subT(S,T,T_) :- maplist(subT1(S),T,T_).
 subT1(S,(X:T2),(X:T2_)) :- tsub(S,T2,T2_).
+ssub(S,S1,S1_) :- maplist(ssub1(S),S1,S1_).
+ssub1(S,T1/T2,T1_/T2_) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
 
 % Reduction rules
 
@@ -189,34 +189,23 @@ F1 ± F2 ⟹ F :-
 dom(F,Dom) :- maplist([L:_,L]>>!,F,Dom).
 
 u(K,E,(K0,S)) :- u(E,K,[],[],(_, K0, S, _)).
+u([],K,S,SK,([],K,S,SK)) /*:- writeln(b:u([],K,S,SK))*/.
 u(E,K,S,SK,(E_,K_,S_,SK_)) :-
   u((E,K,S,SK) ⟹ (E1,K1,S1,SK1)),!,
   u(E1,K1,S1,SK1,(E_,K_,S_,SK_)).
-u(E,K,S,SK,(E,K,S,SK)).
 
-ssub(S,S1,S1_) :- maplist(ssub1(S),S1,S1_).
-ssub1(S,T1/T2,T1_/T2_) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
-u((E,K,S,SK) ⟹ _) :- writeln(u(E,K,S,SK)),fail.
-%(i)
+%u((E,K,S,SK) ⟹ _) :- writeln(a:u(E,K,S,SK)),fail.
+%(i) type
 u(([(τ,τ)|E],K,S,SK) ⟹ (E,K,S,SK)).
-%(ii)
-u(([(τ,t)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
-  t(t),\+t(τ),!,u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)).
+%(ii) 
 u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
-  t(t),\+t(τ),
+  t(t),
   ftv(τ,FTV), \+member(t,FTV),
   member(t::u,K0), subtract(K0,[t::u],K),!,
   subE([τ/t],E,E_), ksub([τ/t],K,K_),
   ssub([τ/t],S,S1), union(S1,[τ/t],S_),
   ssub([τ/t],SK,SK1), union(SK_,[u/t],SK_).
-u(([(t,τ)|E],K,S,SK) ⟹ (E_,K_,S_,SK_)) :-
-  t(t),\+t(τ),
-  ftv(τ,FTV), \+member(t,FTV),
-  \+member(t::_,K),!,
-  subE([τ/t],E,E_), ksub([τ/t],K,K_),
-  ssub([τ/t],S,S1), union(S1,[τ/t],S_),
-  ssub([τ/t],SK,SK1), union(SK_,[u/t],SK_).
-%(iii)
+%(iii) record
 u(([(t1,t2)|E],K0,S,SK) ⟹ (E_, K_, S_,SK_)) :-
   t(t1),t(t2),
   member(t1::F1,K0), record(l:q,F1), member((t2,F2),K0), record(l:q,F2), subtract(K0,[(t1,F1),(t2,F2)],K),
@@ -226,7 +215,7 @@ u(([(t1,t2)|E],K0,S,SK) ⟹ (E_, K_, S_,SK_)) :-
   ksub([t2/t1],K,K1),F1 ± F2 ⟹ F12,tsub([t2/t1],F12,F12_),union(K1,[(t2,F12_)],K_),
   ssub([t2/t1],S,S1), union(S1,[t2/t1],S_),
   ssub([t2/t1],SK,SK1), union(SK1,[F1/t1],SK_).
-%(iv)
+%(iv) record2
 u(([(t1,F2)|E],K0,S,SK) ⟹ (E_,K_, S_,SK_)) :- record(l:q,F2),
   member(t1::F1,K0), record(l:q,F1), subtract(K0,[t1::F1],K),
   dom(F1,Dom1), dom(F2,Dom2),Dom1 ⊆ Dom2, ftv(F2,FTV), \+member(t, FTV),
@@ -235,40 +224,49 @@ u(([(t1,F2)|E],K0,S,SK) ⟹ (E_,K_, S_,SK_)) :- record(l:q,F2),
   ksub([F2/t1],K,K_),
   ssub([F2/t1],S,S1), union(S1,[F2/t1],S_),
   ssub([F2/t1],SK,SK1), union(SK1,[F1/t1],SK_).
-%(v)
+%(v) record3
 u(([(F1,F2)|E],K,S,SK) ⟹ (E_,K,S,SK)) :- record(l:q,F1),record(l:q,F2),
   dom(F1,Dom1), dom(F2,Dom2), Dom1=Dom2,
   maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom1,ED),
   union(E,ED,E_).
-%(vi)
+%(vi) variant
 u(([(t1,t2)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
   t(t1),t(t2),
-  member((t1,{F1}),K0),list(F1), member((t2,{F2}),K0),list(F2), subtract(K0,[(t1,{F1}),(t2,{F2})],K),
+  member((t1,{F1}),K0),list(l:q,F1), member((t2,{F2}),K0),list(l:q,F2), subtract(K0,[(t1,{F1}),(t2,{F2})],K),
   dom(F1,Dom1), dom(F2,Dom2), intersection(Dom1,Dom2,Dom12),
   maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom12,ED),
   union(E,ED,E1), subE([t2/t1],E1,E_),
   ksub([t2/t1],K,K1), F1 ± F2 ⟹ F12, tsub([t2/t1],{F12},{F12_}), union(K1,[(t2,{F12_})],K_),
   ssub([t2/t1],S,S1), union(S1,[t2/t1],S_),
   ssub([t2/t1],SK,SK1), union(SK1,[{F1}/t1],SK_).
-%(vii)
-u(([(t1,{F2})|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :- t(t1),list(F2),
-  member((t1,{F1}),K0),list(F1), subtract(K0,[(t1,{F1})],K),
+%(vii) variant2
+u(([(t1,{F2})|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :- t(t1), list(l:q,F2),
+  member((t1::{F1}),K0),list(l:q,F1), subtract(K0,[(t1::{F1})],K),
   dom(F1,Dom1), dom(F2,Dom2), Dom1 ⊆ Dom2, ftv(F2,FTV), \+member(t1, FTV),
   maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom1,ED),
   union(E,ED,E1), subE([{F2}/t1],E1,E_),
   ksub([{F2}/t1],K,K_),
   ssub([{F2}/t1],S,S1), union(S1,[{F2}/t1],S_),
   ssub([{F2}/t1],SK,SK1), union(SK1,[{F1}/t1],SK_).
-% (viii)
-u(([({F1},{F2})|E],K,S,SK) ⟹ (E_,K,S,SK)) :- list(F1),list(F2),
-  dom(F1,Dom1), dom(F2,Dom2), Dom1=Dom2,
-  maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom1,ED),
+% (viii) variant3
+u(([({F1},{F2})|E],K,S,SK) ⟹ (E_,K,S,SK)) :- list(l:q,F1),list(l:q,F2),
+  dom(F1,Dom), dom(F2,Dom),
+  maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom,ED),
   union(E, ED, E_).
-%(ix)
+%(ix) arr
 u(([((τ11->τ21),(τ12->τ22))|E],K,S,SK) ⟹ (E_,K,S,SK)) :-
   union(E,[(τ11,τ12),(τ21,τ22)],E_).
 
-% 各ルールの左側にX∪Yという形式の表記がある場合、XとYは互いに素であると仮定します。
+u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
+  t(t),
+  ftv(τ,FTV), \+member(t,FTV),
+  \+member(t::_,K0),
+  subE([τ/t],E,E_), ksub([τ/t],K0,K_),
+  ssub([τ/t],S,S1), union(S1,[τ/t],S_),
+  ssub([τ/t],SK,SK1), union(SK_,[u/t],SK_).
+u(([(τ,t)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
+  t(t),!,u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)).
+
 wk(K,T,I,(K,[],I,int)) :- i(I).
 wk(K,T,true,(K,[],true,bool)) :- !.
 wk(K,T,false,(K,[],false,bool)) :- !.
@@ -311,24 +309,20 @@ wk(K,T,modify(E1,L,E2),(K3,S321,modify(M1_:t2_,L,M2_),t2_)) :-
   msub(S32,M1,M1_),tsub(S3,t2,t2_),msub(S3,M2,M2_).
 
 wk(K,T,case(E0,{Les}), (Kn1,S_, case(M0_,{LMs_}),t0_)) :-
-  wk(K,T,E0,(K0,S0,M0,τ0)), subT(S0,T,T0), fresh(t0),writeln('T0':T0),
+  wk(K,T,E0,(K0,S0,M0,τ0)), subT(S0,T,T0), fresh(t0),
   foldr([Li=Ei,(Ki1,Ti1,LMs1,Lts1,K1,Tts1,S1),
     (Ki,Ti,[Li=Mi|LMs1],[Li:ti|Lts1],[ti::u|K1],[(τi,ti)|Tts1],S)]>>(
     wk(Ki1,Ti1,Ei,(Ki,Si,Mi,τi)), subT(Si,Ti1,Ti),
     union(Si,S1,S),fresh(ti)
   ),Les,(K0,T0,[],[],Kn,[],[]),(Kn,Tn,LMs,Lts,Kn_,Tts,S)),
-  writeln(b),
   maplist({t0,S}/[(τi,ti),(τi_,(t0->ti))]>>tsub(S,τi,τi_),Tts,Tts_),
   tsub(S,τ0,τ0_), union([(τ0_,{Lts})],Tts_,Tts2),
-  writeln(d),
-  u(Kn_,Tts2, (Kn1,Sn1)),writeln(f:u(Kn_,Tts2, (Kn1,Sn1))),union(Sn1,S,S_),
-  writeln(e:S_;tsub(Sn1,t0)),
+  u(Kn_,Tts2, (Kn1,Sn1)),union(Sn1,S,S_),
   tsub(Sn1,t0,t0_),msub(S_,M0,M0_),
-
   maplist({S}/[Li=Mi,Li=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
 
 wk(K,T,{[L=E1]},([t::{[L:τ1]}|K1],S1,({[L=M1]}:t),t)) :-
-  wk(K,T,E1,(K1,S1,M1,τ1)),fresh(t),writeln(k1:K1;s1:S1).
+  wk(K,T,E1,(K1,S1,M1,τ1)),fresh(t).
 
 wk(K,T,(let(X=E1);E2),(K2,S21,(let(X:σ1_=poly(M1_:σ1_)); M2),τ2)) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),subT(S1,T,T1),

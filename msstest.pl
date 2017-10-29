@@ -95,12 +95,12 @@
   test(a) :- cls([t1 :: u, t2 :: [l:t1]],[],t2,R),!,R=([],∀(t1,u,∀(t2,[l:t1],t2))).
 :- end_tests(cls).
 
-test(A,(M,T_)) :- reset,wk([],[],A,(K,_,M,T)),cls(K,[],T,(_,T_)).
+test(A,(M_,T_)) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T_)),mtsub(S,M,M_).
 :- begin_tests(typing).
   test(int) :- test(10,Q),!,Q=(10,int).
   test(true) :- test(true,Q),!,Q=(true,bool).
   test(false) :- test(false,Q),!,Q=(false,bool).
-  test(λ) :- test(λ(x,x), Q),!,writeln(q=Q),Q=(λ(x:'%x0',x),∀('%x0',u,('%x0'->'%x0'))).
+  test(λ) :- test(λ(x,x), Q),!,Q=(λ(x:'%x0',x),∀('%x0',u,('%x0'->'%x0'))).
   test(app) :- test((λ(x,x)$1), Q),!,Q=(λ(x:int,x)$1,int).
 %  test(app) :- test(λ(t::u,λ(x:t,x)) , Q),!,Q= ∀(t,u,(t->t)).
 %  test(tapp) :- test((λ(t::u,λ(x:t,x)) ! int), Q),!,Q=(int->int).
@@ -113,9 +113,9 @@ test(A,(M,T_)) :- reset,wk([],[],A,(K,_,M,T)),cls(K,[],T,(_,T_)).
   test(record) :- test((λ(z,[y=z])$10), Q),!,Q==(λ(z:int,[y=z])$10,[y:int]).
   test(record) :- test((modify((λ(z,[x=1,y=z])$10),x,2)), Q),!,Q==(modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2),[x:int,y:int]).
   test(variant) :- test({[eint=1]},Q),!,Q==({[eint=1]}:'%x0',∀('%x0',{[eint:int]},'%x0')).
-  %test(variant) :- writeln(-----),test((case({[eint=1]},{[eint=λ(x,x)]})),Q),!,writeln(q=Q),Q==int.
-  %test(variant) :- writeln(-----),test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x)]})),Q),!,writeln(q=Q),Q==int.
-  %test(variant) :- test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x),b=λ(x,x)]})),Q),!,writeln(q=Q),Q==int.
+  test(variant) :- test((case({[eint=1]},{[eint=λ(x,x)]})),Q),!,Q==(case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}),int).
+  test(variant) :- test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x)]})),Q),!,Q==(case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}),int).
+  test(variant) :- test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x),b=λ(x,x)]})),Q),!,Q==(case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}),int).
 :- end_tests(typing).
 
 :- run_tests.
