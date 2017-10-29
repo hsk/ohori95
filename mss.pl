@@ -57,38 +57,33 @@ tsub(S,LMs,LMs_) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
 tsub(S,{LMs},{LMs_}) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
 tsub(S,∀(T,K,Q),∀(T,K_,Q_)) :- subtract(S,[_/T],S_),ksub(S_,K,K_),tsub(S_,Q,Q_).
 
-ksub(S,M,M_) :- foldl(ksub1(S),S,M,M_),!.
-ksub1(_,_/_,u,u).
-ksub1(S,N/X,LQs,LQs_) :- maplist({S,N,X}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
-ksub1(S,N/X,{LQs},{LQs_}) :- maplist({S,N,X}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
+ksub(S,u,u).
+ksub(S,LQs,LQs_) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
+ksub(S,{LQs},{LQs_}) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 
-esub(S,M,M_) :- foldl(esub1(S),S,M,M_),!.
-esub1(S,N/X,X,N_) :- esub(S,N,N_).
-esub1(_,_/_,X1,X1) :- x(X1).
-esub1(_,_/_,CB,CB) :- cb(CB).
-esub1(_,_/X,λ(X,M),λ(X,M)).
-esub1(S,N/X,λ(X1,M),λ(X1,M_)) :- esub1(S,N/X,M,M_).
-esub1(S,N/X,(M1$M2),(M1_$M2_)) :- esub1(S,N/X,M1,M1_), esub1(S,N/X,M2,M2_).
-esub1(S,N/X,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>esub1(S,N/X,M,M_),LMs,LMs_).
-esub1(S,N/X,(M#L),(M_#L)) :- esub1(S,N/X,M,M_).
-esub1(S,N/X,modify(M1,L,M2),modify(M1_,L,M2_)) :- esub1(S,N/X,M1,M1_), esub1(S,N/X,M2,M2_).
-esub1(S,N/X,{[L=M]},{[L=M_]}) :- esub1(S,N/X,M,M_).
-esub1(S,N/X,case(M,{LMs}),case(M_,{LMs_})) :- esub1(S,N/X,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>esub1(S,N/X,Mi,Mi_),LMs,LMs_).
+esub(S,X,N_) :- member(N/X,S),!,esub(S,N,N_).
+esub(_,X,X) :- x(X),!.
+esub(_,CB,CB) :- cb(CB),!.
+esub(S,λ(X,M),λ(X,M_)) :- !,subtract(S,[_/X],S_),esub(S_,M,M_).
+esub(S,(M1$M2),(M1_$M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
+esub(S,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>esub(S,M,M_),LMs,LMs_).
+esub(S,(M#L),(M_#L)) :- !,esub(S,M,M_).
+esub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
+esub(S,{[L=M]},{[L=M_]}) :- esub(S,M,M_).
+esub(S,case(M,{LMs}),case(M_,{LMs_})) :- esub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>esub(S,Mi,Mi_),LMs,LMs_).
 
-msub(S,M,M_) :- foldl(msub1(S),S,M,M_),!.
-msub1(S,N/X,X,N_) :- msub(S,N,N_).
-msub1(_,_/_,X1,X1) :- x(X1).
-msub1(_,_/_,CB,CB) :- cb(CB).
-msub1(_,N/X,λ(X:Q,M),λ(X:Q,M)).
-msub1(S,N/X,λ(X1:Q,M),λ(X1:Q,M_)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,(M1$M2),(M1_$M2_)) :- msub1(S,N/X,M1,M1_), msub1(S,N/X,M2,M2_).
-msub1(S,N/X,(M!Q),(M_!Q)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,λ(T::K,M),λ(T::K,M_)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>msub1(S,N/X,M,M_),LMs,LMs_).
-msub1(S,N/X,(M#L),(M_#L)) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,modify(M1,L,M2),modify(M1_,L,M2_)) :- msub1(S,N/X,M1,M1_), msub1(S,N/X,M2,M2_).
-msub1(S,N/X,{[L=M]}:Q,{[L=M_]}:Q) :- msub1(S,N/X,M,M_).
-msub1(S,N/X,case(M,{LMs}),case(M_,{LMs_})) :- msub1(S,N/X,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>msub1(S,N/X,Mi,Mi_),LMs,LMs_).
+msub(S,X,N_) :- x(X),member(N/X,S),msub(S,N,N_).
+msub(S,X,X) :- x(X).
+msub(_,CB,CB) :- cb(CB).
+msub(S,λ(X:Q,M),λ(X:Q,M_)) :- subtract(S,[_/X],S_),msub(S_,M,M_).
+msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
+msub(S,(M!Q),(M_!Q)) :- msub(S,M,M_).
+msub(S,λ(T::K,M),λ(T::K,M_)) :- msub(S,M,M_).
+msub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>msub(S,M,M_),LMs,LMs_).
+msub(S,(M#L),(M_#L)) :- msub(S,M,M_).
+msub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
+msub(S,{[L=M]}:Q,{[L=M_]}:Q) :- msub(S,M,M_).
+msub(S,case(M,{LMs}),case(M_,{LMs_})) :- msub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
 
 mtsub(S,X,N_) :- x(X),member(N/X,S),mtsub(S,N,N_).
 mtsub(S,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub(S,Q,Q_),mtsub(S,M,M_).
@@ -101,16 +96,15 @@ mtsub(S,{[L=M]}:Q,{[L=M_]}:Q_) :- mtsub(S,M,M_),tsub(S,Q,Q_).
 mtsub(S,case(M,{LMs}),case(M_,{LMs_})) :- mtsub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>mtsub(S,Mi,Mi_),LMs,LMs_).
 mtsub(_,M,M).
 
-etsub(S,M,M_) :- foldl(etsub1(S),S,M,M_),!.
-etsub1(S,N/X,X,N_) :- etsub(S,N,N_).
-etsub1(S,N/X,λ(X1,M),λ(X1,M_)) :- tsub(S,M,M_).
-etsub1(S,N/X,(M1$M2),(M1_$M2_)) :- etsub1(S,N/X,M1,M1_), etsub1(S,N/X,M2,M2_).
-etsub1(S,N/X,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>etsub1(S,N/X,M,M_),LMs,LMs_).
-etsub1(S,N/X,(M#L),(M_#L)) :- etsub1(S,N/X,M,M_).
-etsub1(S,N/X,modify(M1,L,M2),modify(M1_,L,M2_)) :- etsub1(S,N/X,M1,M1_), etsub1(S,N/X,M2,M2_).
-etsub1(S,N/X,{[L=M]}:Q,{[L=M_]}:Q) :- etsub1(S,N/X,M,M_).
-etsub1(S,N/X,case(M,{LMs}),case(M_,{LMs_})) :- etsub1(S,N/X,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>etsub1(S,N/X,Mi,Mi_),LMs,LMs_).
-etsub1(_,_/_,M,M).
+etsub(S,X,N_) :- member(N/X,S),!,etsub(S,N,N_).
+etsub(S,X,X) :- x(X),!.
+etsub(S,λ(X1,M),λ(X1,M_)) :- tsub(S,M,M_).
+etsub(S,(M1$M2),(M1_$M2_)) :- etsub(S,M1,M1_), etsub(S,M2,M2_).
+etsub(S,LMs,LMs_) :- maplist({S,N,X}/[L=M,L=M_]>>etsub(S,M,M_),LMs,LMs_).
+etsub(S,(M#L),(M_#L)) :- etsub(S,M,M_).
+etsub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- etsub(S,M1,M1_), etsub(S,M2,M2_).
+etsub(S,{[L=M]}:Q,{[L=M_]}:Q) :- etsub(S,M,M_).
+etsub(S,case(M,{LMs}),case(M_,{LMs_})) :- etsub(S,M,M_),maplist({S,N,X}/[L=Mi,L=Mi_]>>etsub(S,Mi,Mi_),LMs,LMs_).
 
 subE(S,E,E_) :- maplist(subE1(S),E,E_).
 subE1(S,(T1,T2),(T1_,T2_)) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
