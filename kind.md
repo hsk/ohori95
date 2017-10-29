@@ -1,12 +1,39 @@
+## 2.2
+
+Since in our system types may depend on type variables other than their own free type variables, we need to extend the notion of free type variables of a type.
+For a type σ well formed under K, the set of essentially free type variables of σ under K, denoted by EFTV(K, σ), is the smallest set satisfying:
+
+- `FTV(σ) ⊆ EFTV(K, σ)`.
+- if `t ∈ EFTV(K, σ)` then `FTV(K(t)) ⊆ EFTV(K, σ)`.
+
+Intuitively, `t ∈ EFTV(K, σ)` if `σ` contains `t` either directly or through kind constrains specified by `K`.
+For example, `t1` is essentially free in `t2` under `{t1::U, t2::{{l:t1}}}`.
+This notion naturally extends to other syntactic structures containing types.
+A type assignment T is a mapping from a finite set of variables to types.
+We write {x1:σ1,···,xn:σn} for the type assignment that binds xi to σi (1 ≤ i ≤ n).
+We also write T {x : σ} for T ∪ {x : σ} provided that x ∈/ dom(T).
+The type system is defined as a proof system to derive a typing of the form K, T ▷ M : σ.
+The set of typing rules is given in Figure 5.
+In the rule tabs, the condition `t ∈/ FTV(T)` is equivalent to `t ∈/ EFTV(K{t::k}, T)` under our assumption on `K{t::k}`.
+We write `Λ∀,# |- K, T ▷ M : σ` if `K, T ▷ M : σ` is derivable in this proof system.
+
+Unlike the polymorphic type discipline for records based on subtyping, this type system has the following property.
+
 ### Lemma 3.1.1.
 
   If K |- σ1 ≥ σ2 and K |- σ2 ≥ σ3 then K |- σ1 ≥ σ3.
 
 Let T and τ be well formed under K.
-The closure of τ under T, K, denoted by Cls(K, T, τ), is a pair (K0, ∀t1::k1···∀tn::kn.τ) such that K0{t1::k1,···,tn::kn} = K and {t1,···,tn} = E FTV (K, τ) \ E FTV(K,T).
-Note that if λ let, # |- K, T ¤ e : τ and Cls(K, T, τ) = (K0, σ) then T and σ are well formed under K0.
-A type assignment is a mapping from a finite set of variables to polytypes.
-The set of typing rules for λ let, # is given in Figure 7.
+The closure of τ under T, K, denoted by Cls(K, T, τ), is a pair (K0, ∀t1::k1···∀tn::kn.τ) such that K0{t1::k1,···,tn::kn} = K and {t1,···,tn} = EFTV(K, τ) \ EFTV(K,T).
+Note that if λ let, # |- K, T ▷ e : τ and Cls(K, T, τ) = (K0, σ) then T and σ are well formed under K0.
+
+### 補題 3.1.1.
+
+    K |- σ1 ≥ σ2 かつ K |- σ2 ≥ σ3 ならば、K |- σ1 ≥ σ3
+
+`T` と `τ` を `K` の下で well formed とします。
+`Cls(K, T, τ)` で表される `T`、`K` の下の `τ` の閉包 (closure) は `K0{t1::k1,···,tn::kn} = K` かつ `{t1,···,tn} = EFTV(K, τ) \ EFTV(K,T)` であるペア `(K0, ∀t1::k1···∀tn::kn.τ)` です。
+`λlet,# |- K, T ▷ e : τ` かつ `Cls(K, T, τ) = (K0, σ)` ならば、`T` と `σ` は `K0` の下で well formed であることに注意してください。
 
 # 3.4 Kinded Unification
 
