@@ -30,7 +30,45 @@ e ::= x | cb | λ(x,e) | (e $ e) | (let(x=e);e)
     | record(l=e) | e#l | modify(e,l,e)
     | {[l=e]} | case(e,variant(l=e)).
 
+v ::= cb | λ(x,e) | record(l=v) | {[l=v]}.
+
+% Reduction rules
+
+ev(H/R,(V1$E2),(V1$E2_)) :- v(V1),\+v(E2),!,ev(H/R,E2,E2_).
+ev(H/R,(E1$E2),(E1_$E2)) :- \+v(E1),!,ev(H/R,E1,E1_).
+ev(H/R,(let(X=E1); E2),(let(X=E1_); E2)) :- \+v(E1),!,ev(H/R,E1,E1_).
+ev(H/R,[L=V|LEs],[L=V|LEs_]) :- v(V),!,ev(H/R,LEs,LEs_).
+ev(H/R,[L=E|LEs],[L=E_|LEs]) :- \+v(E),!,ev(H/R,E,E_).
+ev(H/R,(E#L),(E_#L)) :- \+v(E),!,ev(H/R,E,E_).
+ev(H/R,modify(V1,L,E2),modify(V1,L,E2_)) :- v(V1),\+v(E2),!,ev(H/R,E2,E2_).
+ev(H/R,modify(E1,L,E2),modify(E1_,L,E2)) :- \+v(E1),!,ev(H/R,E1,E1_).
+ev(H/R,{[L=E]},{[L=E_]}) :- \+v(E),!,ev(H/R,E,E_).
+ev(H/R,case(E,{LEs}),case(E_,{LEs})) :- \+v(E),!,ev(H/R,E,E_).
+ev(H/E,E,H) :- !.
+
+ev(λ(X,E)$V)                ⟶ ev(E_)          :- v(V),esub([V/X],E,E_).
+ev(LVs#Li)                  ⟶ ev(Vi)          :- member(Li=Vi,LVs).
+ev(modify([Li=_ |LS],Li,N)) ⟶ ev([Li=N|LS]).
+ev(modify([Li=Ei|LS],L,N))  ⟶ ev([Li=Ei|LS_]) :- ev(modify(LS,L,N)) ⟶ ev(LS_).
+ev(case({[Li=V]},{Ls}))     ⟶ ev(Ei $ V)      :- member(Li=Ei,Ls).
+ev(let(X = V); E)           ⟶ ev(E_)          :- esub([V/X],E,E_).
+
+ev(E) ⟹ ev(E_) :- ev(H/R,E,E_), ev(R) ⟶ ev(H).
+ev(E) ⟹ ev(E_) :- ev(E) ⟶ ev(E_).
+E ⟹* E_ :- ev(E) ⟹ ev(E1),!, E1 ⟹* E_.
+E ⟹* E.
+
 % Substitutions
+esub(S,X,N_) :- member(N/X,S),!,esub(S,N,N_).
+esub(_,X,X) :- x(X),!.
+esub(_,CB,CB) :- cb(CB),!.
+esub(S,λ(X,M),λ(X,M_)) :- !,subtract(S,[_/X],S_),esub(S_,M,M_).
+esub(S,(M1$M2),(M1_$M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
+esub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>esub(S,M,M_),LMs,LMs_).
+esub(S,(M#L),(M_#L)) :- !,esub(S,M,M_).
+esub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
+esub(S,{[L=M]},{[L=M_]}) :- esub(S,M,M_).
+esub(S,case(M,{LMs}),case(M_,{LMs_})) :- esub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>esub(S,Mi,Mi_),LMs,LMs_).
 
 tsub(S,X,N_) :- t(X),member(N/X,S),tsub(S,N,N_).
 tsub(_,X1,X1) :- t(X1).
@@ -44,19 +82,9 @@ ksub(_,u,u).
 ksub(S,LQs,LQs_) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 ksub(S,{LQs},{LQs_}) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 
-esub(S,X,N_) :- member(N/X,S),!,esub(S,N,N_).
-esub(_,X,X) :- x(X),!.
-esub(_,CB,CB) :- cb(CB),!.
-esub(S,λ(X,M),λ(X,M_)) :- !,subtract(S,[_/X],S_),esub(S_,M,M_).
-esub(S,(M1$M2),(M1_$M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
-esub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>esub(S,M,M_),LMs,LMs_).
-esub(S,(M#L),(M_#L)) :- !,esub(S,M,M_).
-esub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- esub(S,M1,M1_), esub(S,M2,M2_).
-esub(S,{[L=M]},{[L=M_]}) :- esub(S,M,M_).
-esub(S,case(M,{LMs}),case(M_,{LMs_})) :- esub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>esub(S,Mi,Mi_),LMs,LMs_).
-
 msub(S,X,N_) :- x(X),member(N/X,S),msub(S,N,N_).
 msub(_,X,X) :- x(X).
+msub(S,x(X,T),x(X_,T)) :- msub(S,X,X_).
 msub(_,CB,CB) :- cb(CB).
 msub(S,λ(X:Q,M),λ(X:Q,M_)) :- subtract(S,[_/X],S_),msub(S_,M,M_).
 msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
@@ -69,6 +97,7 @@ msub(S,{[L=M]}:Q,{[L=M_]}:Q) :- msub(S,M,M_).
 msub(S,case(M,{LMs}),case(M_,{LMs_})) :- msub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
 
 mtsub(S,X,N_) :- x(X),member(N/X,S),mtsub(S,N,N_).
+mtsub(S,x(X,T),x(X_,T_)) :- tsub(S,T,T_),mtsub(S,X,X_).
 mtsub(S,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub(S,Q,Q_),mtsub(S,M,M_).
 mtsub(S,(M1$M2),(M1_$M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
 mtsub(S,(M!Q),(M_!Q_)) :- mtsub(S,M,M_), tsub(S,Q,Q_).
@@ -97,33 +126,6 @@ subT1(S,(X:T2),(X:T2_)) :- tsub(S,T2,T2_).
 ssub(S,S1,S1_) :- maplist(ssub1(S),S1,S1_).
 ssub1(S,T1/T2,T1_/T2_) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
 
-% Reduction rules
-
-v    ::= cb | λ(x,e) | record(l=v) | {[l=v]}.
-
-ev(H/R,(V1$E2),(V1$E2_)) :- v(V1),\+v(E2),!,ev(H/R,E2,E2_).
-ev(H/R,(E1$E2),(E1_$E2)) :- \+v(E1),!,ev(H/R,E1,E1_).
-ev(H/R,(let(X=E1); E2),(let(X=E1_); E2)) :- \+v(E1),!,ev(H/R,E1,E1_).
-ev(H/R,[L=V|LEs],[L=V|LEs_]) :- v(V),!,ev(H/R,LEs,LEs_).
-ev(H/R,[L=E|LEs],[L=E_|LEs]) :- \+v(E),!,ev(H/R,E,E_).
-ev(H/R,(E#L),(E_#L)) :- \+v(E),!,ev(H/R,E,E_).
-ev(H/R,modify(V1,L,E2),modify(V1,L,E2_)) :- v(V1),\+v(E2),!,ev(H/R,E2,E2_).
-ev(H/R,modify(E1,L,E2),modify(E1_,L,E2)) :- \+v(E1),!,ev(H/R,E1,E1_).
-ev(H/R,{[L=E]},{[L=E_]}) :- \+v(E),!,ev(H/R,E,E_).
-ev(H/R,case(E,{LEs}),case(E_,{LEs})) :- \+v(E),!,ev(H/R,E,E_).
-ev(H/E,E,H) :- !.
-
-ev(λ(X,E)$V)                ⟶ ev(E_)          :- v(V),esub([V/X],E,E_).
-ev(LVs#Li)                  ⟶ ev(Vi)          :- member(Li=Vi,LVs).
-ev(modify([Li=_ |LS],Li,N)) ⟶ ev([Li=N|LS]).
-ev(modify([Li=Mi|LS],L,N))  ⟶ ev([Li=Mi|LS_]) :- ev(modify(LS,L,N)) ⟶ ev(LS_).
-ev(case({[Li=V]},{Ls}))     ⟶ ev(Ei $ V)      :- member(Li=Ei,Ls).
-ev(let(X = V); E)           ⟶ ev(E_)          :- esub([V/X],E,E_).
-
-ev(M) ⟹ ev(M_) :- ev(H/R,M,M_), ev(R) ⟶ ev(H).
-ev(M) ⟹ ev(M_) :- ev(M) ⟶ ev(M_).
-M ⟹* M_ :- ev(M) ⟹ ev(M1),!, M1 ⟹* M_.
-M ⟹* M.
 
 % Free Type variables
 :- begin_var_names(['^[τtxσk]'],['^(true|bool|int)$']).
@@ -147,15 +149,6 @@ eftv(_,σ,FTV) :- ftv(σ,FTV).
 reset :- bb_put(i,0).
 fresh(T) :- bb_get(i,I), format(atom(T),'%x~w',[I]), I1 is I + 1, bb_put(i,I1).
 
-foldxq((X,∀(T_,K,Q),Ks,S),(X_,Q_,[Si::K|Ks_],[Si/T_|S_])) :-
-  fresh(Si),foldxq(((X$Si),Q,Ks,S),(X_,Q_,Ks_,S_)).
-foldxq((X,Q,Ks,S),(X,Q,Ks,S)).
-
-cls(K, T, τ, (K0,τ_)) :-
-  eftv(K, τ,τFTV), eftv(K, T, TFTV), subtract(τFTV, TFTV, ts),
-  findall((Ti::Ki),(member(Ti::Ki,K),member(Ti,ts)),K1),
-  subtract(K,K1,K0),foldr([Ti::Ki,τi,∀(Ti,Ki,τi)]>>!,K1,τ,τ_).
-
 % 3.4 Kinded Unification
 
 F1 ⊆ F2 :- intersection(F2,F1,F1_),length(F1,L),length(F1_,L).
@@ -170,18 +163,25 @@ u([],K,S,SK,([],K,S,SK)) /*:- writeln(b:u([],K,S,SK))*/.
 u(E,K,S,SK,(E_,K_,S_,SK_)) :-
   u((E,K,S,SK) ⟹ (E1,K1,S1,SK1)),!,
   u(E1,K1,S1,SK1,(E_,K_,S_,SK_)).
+u([(T1,T2)|E],K,S,SK,(E_,K_,S_,SK_)) :-
+  u(([(T2,T1)|E],K,S,SK) ⟹ (E1,K1,S1,SK1)),!,
+  u(E1,K1,S1,SK1,(E_,K_,S_,SK_)).
 
 %u((E,K,S,SK) ⟹ _) :- writeln(a:u(E,K,S,SK)),fail.
 %(i) type
 u(([(τ,τ)|E],K,S,SK) ⟹ (E,K,S,SK)).
 %(ii) 
 u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
-  t(t),
-  ftv(τ,FTV), \+member(t,FTV),
+  t(t), ftv(τ,FTV), \+member(t,FTV),
   member(t::u,K0), subtract(K0,[t::u],K),!,
   subE([τ/t],E,E_), ksub([τ/t],K,K_),
   ssub([τ/t],S,S1), union(S1,[τ/t],S_),
   ssub([τ/t],SK,SK1), union(SK1,[u/t],SK_).
+u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
+  t(t), ftv(τ,FTV), \+member(t,FTV), \+member(t::_,K0),
+  u(([(t,τ)|E],[t::u|K0],S,SK) ⟹ (E_,K_,S_,SK_)).
+u(([(∀(t,k,t1),τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
+  u(([(t1,τ)|E],[t::k|K0],S,SK) ⟹ (E_,K_,S_,SK_)).
 %(iii) record
 u(([(t1,t2)|E],K0,S,SK) ⟹ (E_, K_, S_,SK_)) :-
   t(t1),t(t2),
@@ -233,17 +233,18 @@ u(([({F1},{F2})|E],K,S,SK) ⟹ (E_,K,S,SK)) :- list(l:q,F1),list(l:q,F2),
 %(ix) arr
 u(([((τ11->τ21),(τ12->τ22))|E],K,S,SK) ⟹ (E_,K,S,SK)) :-
   union(E,[(τ11,τ12),(τ21,τ22)],E_).
-u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
-  t(t),
-  ftv(τ,FTV), \+member(t,FTV),
-  \+member(t::_,K0),
-  subE([τ/t],E,E_), ksub([τ/t],K0,K_),
-  ssub([τ/t],S,S1), union(S1,[τ/t],S_),
-  ssub([τ/t],SK,SK1), union(SK1,[u/t],SK_).
-u(([(τ,t)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
-  t(t),!,u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)).
 
 % alorighm WK
+
+foldxq((X,∀(T_,K,Q),Ks,S),(X_,Q_,[Si::K|Ks_],[Si/T_|S_])) :-
+  fresh(Si),!,foldxq((x(X,Si),Q,Ks,S),(X_,Q_,Ks_,S_)).
+foldxq((X,Q,Ks,S),(X,Q,Ks,S)).
+
+cls(K, _, ∀(t,k,τ), (K,∀(t,k,τ))).
+cls(K, T, τ, (K0,τ_)) :-
+  eftv(K, τ,τFTV), eftv(K, T, TFTV), subtract(τFTV, TFTV, ts),
+  findall((Ti::Ki),(member(Ti::Ki,K),member(Ti,ts)),K1),
+  subtract(K,K1,K0),foldr([Ti::Ki,τi,∀(Ti,Ki,τi)]>>!,K1,τ,τ_).
 
 wk(K,_,I,(K,[],I,int)) :- i(I).
 wk(K,_,true,(K,[],true,bool)) :- !.
@@ -252,8 +253,7 @@ wk(K,T,x,(K_,[],x_,Sτ2)) :-
   x(x),
   member(x:Sτ, T),
   foldxq((x,Sτ,[],[]),(x_,Sτ1,SKs,S)),
-  foldr({S}/[(Si::Ki),(Si::Ki_)]>>ksub(S,Ki,Ki_),SKs,K,K_),
-  tsub(S,Sτ1,Sτ2).
+  maplist({S}/[(Si::Ki),(Si::Ki_)]>>ksub(S,Ki,Ki_),SKs,SKs_),union(K,SKs_,K_),  tsub(S,Sτ1,Sτ2).
 wk(K,T,λ(x,E1), (K1,S1,λ(x:t_,M1),(t_->t1))) :-
   fresh(t), wk([t::u|K],[x:t|T],E1, (K1,S1,M1,t1)), tsub(S1,t,t_).
 wk(K,T,(E1$E2),(K3,S321,(M1_ $ M2_),t3)) :-
@@ -298,7 +298,7 @@ wk(K,T,(let(X=E1);E2),(K2,S21,(let(X:σ1_=poly(M1_:σ1_)); M2),τ2)) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),subT(S1,T,T1),
   cls(K1,T1,τ1,(K1_,σ1)),
   wk(K1_,[X:σ1|T1],E2,(K2,S2,M2,τ2)),
-  tsub(S2,σ1,σ1_),esub(S2,M1,M1_),
+  tsub(S2,σ1,σ1_),msub(S2,M1,M1_),
   union(S2,S1,S21).
 
 :- end_var_names(_).
