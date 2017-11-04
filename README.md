@@ -412,7 +412,6 @@
 
   Syntax
 
-
 # 4.2 The Type System of λlet,[]
 
     τ ::= t | cb | τ→τ | {l:τ,···,l:τ} | <l:τ,···,l:τ> | idx(l,τ) ⇒ τ
@@ -489,7 +488,7 @@
     (index)   {C1,···,Cn}[i]            ⟹ Ci (1 ≤ i ≤ n)
     (modify)  modify({C1,···,Cn},i,C)   ⟹ {C1,···,Ci−1,C,Ci+1,···,Cn} (1 ≤ i ≤ n)
     (switch)  switch <i=C> of C1,···,Cn ⟹ Ci C (1 ≤ i ≤ n)
-    (iapp)    (λI.C) Ï                 ⟹ [Ï/I]C
+    (iapp)    (λI.C) Ï                  ⟹ [Ï/I]C
     (let)     let x=C1 in C2            ⟹ [C1/x]C2
 
   Fig. 14. The reduction rules for the implementation calculus λlet,[].
