@@ -1,6 +1,6 @@
 :- expects_dialect(sicstus).
 :- current_prolog_flag(argv, [V]), use_module(V)
-  ; use_module(ics).
+  ; use_module(rics).
 
 :- begin_tests(avs).
   test(i) :- i(1).
@@ -21,8 +21,6 @@
   test(c_record) :- 'C'([1,2]#[i]).
   test(c_record) :- 'C'([1,2]#[1]).
   test(c_record) :- 'C'(modify([1,2],1,2)).
-  test(c_variant) :- 'C'({[1=1]}).
-  test(c_variant) :- 'C'(switch(1,[λ(x,x),λ(x,add$x#[1]$x#[2])])),!.
   
 :- end_tests(avs).
 
@@ -49,9 +47,7 @@
   test(record) :- (modify([11,22],2,10)) ⟹* [11,10].
   test(record) :- (λ(z,[z])$10) ⟹* [10].
   test(record) :- (modify((λ(z,[11,z])$10),1,22)) ⟹* R,!,R=[22,10].  
-  test(variant) :- ({[1=1]}) ⟹* ({[1=1]}).
-  test(variant) :- (switch((λ(z,{[1=z]})$1),[λ(x,x),λ(x,add$x#[1]$x#[2])])) ⟹* 1.
-  test(variant) :- (switch((λ(z,{[2=[z,10]]})$1),[λ(x,x),λ(x,[x#[2],x#[1]])])) ⟹* [10,1].
+
 :- end_tests(eval).
 
 :- begin_tests(τ).
@@ -62,7 +58,6 @@
   test(one_element_record):- τ([a:int]).
   test(three_elements_record):- τ([a:int,b:int,c:bool]).
   test(nested_record):- τ([a:int,b:[a:int,c:bool]]).
-  test(variant):- τ({[eint:int,eadd:['1':e,'2':e]]}).
   test(idx) :- τ(idx(a,x,int)). % todo
 :- end_tests(τ).
 
@@ -70,13 +65,11 @@
   test(k):- k(u).
   test(k):- k([]).
   test(k):- k([l::int]).
-  test(k):- k({[eint::int,eadd::['1':int,'2':int],emul::['1':int,'2':int]]}),!.
 :- end_tests(k).
 
 :- begin_tests(σ).
   test(σ):- σ(∀(t,u,t)).
   test(σ):- σ(∀(t,[a::int,b::int],t)).
-  test(σ):- σ(∀(t,{[a::t,b::t]},{[a:t,b:t,c:int]})),!.
   test(σ):- σ(∀(t,[a::t,b::t],[a:t,b:t,c:int])).
   test(fun) :- σ(int->int).
 :- end_tests(σ).
@@ -89,10 +82,6 @@
   % test(kinding_t):- [a::[x::int,y::int]] ⊢ a::k,k=[y::int]. todo
   test(kinding_record):- [] ⊢ [x:int,y:int]::k,k=[x::int],!.
   test(kinding_record):- [] ⊢ [x:int,y:int]::k,k=[x::int,y::int],!.
-  test(kinding_variant_t):- [a::{[x::int,y::int]}] ⊢ a::k,k={[x::int]},!.
-  test(kinding_variant_t):- [a::{[x::int,y::int]}] ⊢ a::k,k={[x::int,y::int]},!.
-  test(kinding_variant):- [] ⊢ {[x:int,y:int]}::k,k={[x::int]},!.
-  test(kinding_variant):- [] ⊢ {[x:int,y:int]}::k,k={[x::int,y::int]},!.
 :- end_var_names(_).
 :- end_tests(kinding).
 
@@ -100,8 +89,6 @@
   test('IVAR I') :- [k:idx(x,int)] ⊢ k : idx(x,int),!.
   test('IVAR i record') :- [] ⊢ 1 : idx(k,[k:int,j:int]),!.
   test('IVAR i record') :- [] ⊢ 2 : idx(j,[k:int,j:int]),!.
-  test('IVAR i variant') :- [] ⊢ 1 : idx(k,{[k:int,j:int]}),!.
-  test('IVAR i variant') :- [] ⊢ 2 : idx(j,{[k:int,j:int]}),!.
 :- end_tests(index_judgment).
 
 :- begin_tests(typing).
@@ -137,13 +124,15 @@
   test(let) :- test(let(id=λ(x,x));id,Q),!,
     Q=((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));x(id,'%x1')),∀('%x1',u,('%x1'->'%x1'))).
   test(let) :- test(let(id=λ(x,x));id$1,Q),!,
-    Q=((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));x(id,int)$1),int).*/
+    Q=((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));x(id,int)$1),int).
+*/
   test(record) :- ([],[],[]) ▷ [10,20] : T,writeln(t:T).
   test(index) :- ([],[],[]) ▷ ([10,true]#[1]) : int.
   test(index) :- ([],[],[]) ▷ ([10,true]#[2]) : bool.
-  test(switch) :- ([],[],[]) ▷ (switch(1,[λ(x,x),λ(x,add$x#[1]$x#[2])]) : B),!.
+  test(modify) :- ([],[],[]) ▷ (modify([11,22],2,10)) : T,T=[_:int,_:int].
   test(let) :- ([],[],[]) ▷ (let(x=1);x) : B,!,B=int.
 :- end_tests(typing).
+
 
 :- run_tests.
 :- halt.

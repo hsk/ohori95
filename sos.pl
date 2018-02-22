@@ -9,23 +9,23 @@ term_expansion(A--B,B:-A).
 
 % Syntaxs
 
+list(A)    ::= [] | [A | list(A)].
 syntax(k).
 syntax(t). t(T) :- atom(T), \+b(T). 
-b ::= int | bool.
-l ::= atom.
-list(A) ::= [] | [A | list(A)].
-record(A) ::= list(A).
+b          ::= int | bool.
+l          ::= atom.
+record(A)  ::= list(A).
 variant(A) ::= {list(A)}.
-q ::= b | t | (q->q) | record(l:q) | variant(l:q) | ∀(t,k,q).
-k ::= u | record(l:q) | variant(l:q).
+q          ::= b | t | (q->q) | record(l:q) | variant(l:q) | ∀(t,k,q).
+k          ::= u | record(l:q) | variant(l:q).
 
 syntax(integer).
 syntax(x). x(X) :- atom(X), \+cb(X).
-i ::= integer.
+i  ::= integer.
 cb ::= true | false | i.
-m ::= x | cb | λ(x:q,m) | (m $ m) | λ(t::k,m) | (m ! q)
-    | record(l=m) | m#l | modify(m,l,m)
-    | {[l=m]}:q | case(m,variant(l=m)).
+m  ::= x | cb | λ(x:q,m) | (m $ m) | λ(t::k,m) | (m ! q)
+     | record(l=m) | m#l | modify(m,l,m)
+     | {[l=m]}:q | case(m,variant(l=m)).
 
 % Kinding rules
 

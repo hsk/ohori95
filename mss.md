@@ -182,32 +182,26 @@
                 else let ∀t1::k1...∀tn::kn.τ = T(x),
                          S=[s1/t1,···,sn/tn] (s1,···,sn are fresh)
                      in (K{s1::S(k1),···,sn::S(kn)},∅,(x s1···sn),S(τ))
-
     WK(K,T,λx.e1) = let (K1,S1,M1,τ1) = WK(K{t::U},T{x:t},e1) (t fresh)
                     in (K1,S1,λx:S1(t).M1,S1(t)→τ1).
-
     WK(K,T,e1 e2) = let (K1,S1,M1,τ1) = WK(K,T,e1)
                         (K2,S2,M2,τ2) = WK(K1,S1(T),e2)
                         (K3,S3) = U(K2,{(S2(τ1),τ2→t)}) (t fresh)
                     in (K3,S3◦S2◦S1,(S3◦S2(M1) S3(M2)),S3(t)).
-
     WK(K,T,{l1=e1,···,ln=en}) =
       let (K1,S1,M1,τ1) = WK(K,T,e1)
           (Ki,Si,Mi,τi) = WK(Ki−1,Si−1◦···◦S1(T),ei) (2 ≤ i ≤ n)
       in (Kn,Sn◦···◦S2◦S1,
           {l1=Sn◦···◦S2(M1),···,li=Sn◦···◦Si+1(Mi),···,ln=Mn},
           {l1:Sn◦···◦S2(τ1),···,li:Sn◦···◦Si+1(τi),···,ln:τn})
-
     WK(K,T,e1#l) = let (K1,S1,M1,τ1) = WK(K,T,e1)
                        (K2,S2) = U(K1{t1::U,t2::{{l:t1}}},{(t2,τ1)}) (t1,t2 fresh)
                    in (K2,S2◦S1,S2(M1):S2(t2)#l,S2(t1)).
-
     WK(K,T,modify(e1,l,e2)) =
       let (K1,S1,M1,τ1) = WK(K,T,e1)
           (K2,S2,M2,τ2) = WK(K1,S1(T),e2)
           (K3,S3) = U(K2{t1::U,t2::{{l:t1}}},{(t1,τ2),(t2,S2(τ1))}) (t1,t2 fresh)
       in (K3,S3◦S2◦S1,modify(S3◦S2(M1):S3(t2),l,S3(M2)),S3(t2)).
-
     WK(K,T,case e0 of <l1=e1,···,ln=en>) =
       let (K0,S0,M0,τ0) = WK(K,T,e0)
           (Ki,Si,Mi,τi) = WK(Ki−1,Si−1◦···◦S0(T),ei) (1 ≤ i ≤ n)
@@ -215,10 +209,8 @@
                         ∪{(Sn◦···Si+1(τi),ti→t0)|1 ≤ i ≤ n}) (t0,···,tn fresh)
       in (Kn+1,Sn+1◦···◦S0,
           (case Sn+1◦···◦S1(M0) of <···,li=Sn+1◦···◦Si+1(Mi),···>),Sn+1(t0))
-
     WK(K,T,<l=e1>) = let (K1,S1,M1,τ1) = WK(K,T,e1)
                      in (K1{t::<<l:τ1>>},S1,(<l=M1>:t),t) (t fresh)
-
     WK(K,T,let x=e1 in e2) = let (K1,S1,M1,τ1) = WK(K,T,e1)
                                  (K1',σ1) = Cls(K1,S1(T),τ1)
                                  (K2,S2,M2,τ2) = WK(K1',(S1(T)){x:σ1},e2)
