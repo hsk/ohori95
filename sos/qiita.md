@@ -48,17 +48,17 @@ m(M) :- 'M'(M).
 ```
 
 構文は以上のようにrtgライブラリを用いることで定義されています。
-論文との相違点は、型τを省略している点、レコードを[]で、ヴァリアントを{[]}で表している点などがあります。
-最後のq,mの定義はテスト用にあるだけなので消したいと思います。
+論文との相違点は、型 `τ` を省略している点、レコードを `[]` で、ヴァリアントを `{[]}` で表している点などがあります。
+最後の`q`,`m`の定義はテスト用にあるだけなので消したいと思います。
 
 ```prolog
 :- begin_var_names(['^[σlxktcbi]'],['^(true|bool|int)$']).
 ```
 
-rtgライブラリには小文字のatomを変数に書き換えるマクロbegin_var_names/2およびend_var_names/1があります。
-このライブラリを使うと正規表現を用いて小文字のアトムを変数に書き換えて論文により近い記述を可能にします。
-ここでは、σlxktcbiから始まるアトムを変数とみなすと宣言しています。
-第二パラメータではtrue,bool,intは含まないと指定しています。
+`rtg` ライブラリには小文字の `atom` を変数に書き換えるマクロ `begin_var_names/2` および `end_var_names/1` があります。
+この２つの述語は `begin_var_names` と `end_var_names` の間のプログラム内のアトムを変数に書き換えます。
+ここでは、 `σlxktcbi` から始まるアトムを変数とみなすと宣言しています。
+第二パラメータでは `true`,`bool`,`int` は含まないと指定しています。
 
 ```
 % Kinding rules
@@ -152,7 +152,7 @@ kftv({lσs},FTVs) :- foldl([_:σ,FTV,FTV_]>>(ftv(σ,FTVi),union(FTV,FTVi,FTV_)),
 tftv(lσs,FTVs) :- foldl([_:σ,FTV,FTV_]>>(ftv(σ,FTVi),union(FTV,FTVi,FTV_)),lσs,[],FTVs).
 ```
 
-自由型変数を求めるにはftv,kftvを用います。
+自由型変数を求めるには `ftv`, `kftv` を用います。
 
 ```prolog
 % Type system
@@ -214,7 +214,7 @@ maplist({K,T,σ}/[li=Mi,li:σi]>>((K,T) ▷ Mi : (σi->σ)),lMs,lσs)
 :- use_module(sos).
 ```
 
-sicstus prolog的なモードにしてから、sos.plを読み込みます。
+sicstus prologのモードにしてから、 `sos.pl` を読み込みます。
 
 ```prolog
 :- begin_tests(avs).
@@ -303,7 +303,7 @@ sicstus prolog的なモードにしてから、sos.plを読み込みます。
 :- end_tests(msub).
 ```
 
-置換テストはとちゅうでやめちゃいましたｗ
+置換テストは途中でやめちゃいましたｗ
 
 ```prolog
 :- begin_tests(eval).
@@ -352,12 +352,34 @@ sicstus prolog的なモードにしてから、sos.plを読み込みます。
 :- halt.
 ```
 
-最後にテストの実行はrun_testsで行い、haltで終了です。
+最後にテストの実行は `run_tests` で行い、 `halt` で終了です。
+
+## 3. 実行方法
+
+コマンドラインから以下のように実行します:
+
+```bash
+$ swipl sostest.pl
+% PL-Unit: avs .................. done
+% PL-Unit: q1 ........ done
+% PL-Unit: k .... done
+% PL-Unit: q2 .... done
+% PL-Unit: msub ......... done
+% PL-Unit: eval ........... done
+% PL-Unit: typing ................. done
+% All 71 tests passed
+```
+
+## 4. まとめ
+
+以上、Prologを用いて多相レコード計算の触りの部分を実装して実際に動かしてみました。
+Prologを用いればこのように多相レコード計算のような難しそうな理論をかなり論文に近い形で実装し実際に動かしてみることが出来ます。
+多相レコード計算の論文はこのあと、より詳細にML風の言語 `λlet#` の型推論をして型付きML風言語 `Λlet#` を生成し、更に実装言語、
+`λlet[]`へ`Λlet#`をコンパイルするお話が続くわけですが、その話はまた別の機会に書いてみようと思います。
+と言うか2018/2月の現時点でまだ実装できていないので実装できたらまとめてみたいと思いますのでよろしくお願いします。
 
 ## 参考文献
 
-[^1]: A Polymorphic Record Calculus and Its Compilation
-http://www.pllab.riec.tohoku.ac.jp/~ohori/research/toplas95.pdf
+[^1]: A Polymorphic Record Calculus and Its Compilation http://www.pllab.riec.tohoku.ac.jp/~ohori/research/toplas95.pdf
 
-[^1]: ソースコードのリポジトリ
-https://github.com/hsk/ohori95
+[^2]: ソースコードのリポジトリ https://github.com/hsk/ohori95/master/sos/
