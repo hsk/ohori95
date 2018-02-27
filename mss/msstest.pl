@@ -94,32 +94,79 @@
   test(a) :- cls([t1 :: u, t2 :: [l:t1]],[],t2,R),!,R=([],∀(t1,u,∀(t2,[l:t1],t2))).
 :- end_tests(cls).
 
-test(A,(M_,T_)) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T_)),mtsub(S,M,M_).
-:- begin_tests(typing).
-  test(int) :- test(10,Q),!,Q=(10,int).
-  test(true) :- test(true,Q),!,Q=(true,bool).
-  test(false) :- test(false,Q),!,Q=(false,bool).
-  test(λ) :- test(λ(x,x), Q),!,Q=(λ(x:'%x0',x),∀('%x0',u,('%x0'->'%x0'))).
-  test(app) :- test((λ(x,x)$1), Q),!,Q=(λ(x:int,x)$1,int).
+
+:- begin_tests('M').
+  test(int) :- M(10).
+  test(true) :- M(true).
+  test(false) :- M(false).
+  test(λ) :- M(λ(x:'%x0',x)).
+  test(app) :- M(λ(x:int,x)$1).
 %  test(app) :- test(λ(t::u,λ(x:t,x)) , Q),!,Q= ∀(t,u,(t->t)).
 %  test(tapp) :- test((λ(t::u,λ(x:t,x)) ! int), Q),!,Q=(int->int).
-  test(record) :- test(([x=1,y=2]), Q),!,Q=([x=1,y=2],[x:int,y:int]).
+  test(record) :- 'M'([x=1,y=2]).
+  test(record) :- 'M'(([x=1,y=2]:[x:int,y:int])#x).
+  test(record) :- 'M'(([x=1,y=2]:[x:int,y:int])#y).
+  test(record) :- 'M'(([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x).
+  test(record) :- 'M'(modify([x=1,y=2]:[x:int,y:int],x,2)).
+  test(record) :- 'M'(λ(z:int,[y=z])$10).
+  test(record) :- 'M'(modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2)).
+  test(variant) :- 'M'({[eint=1]}:'%x0').
+  test(variant) :- 'M'(case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]})),!.
+  test(variant) :- 'M'(case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]})),!.
+  test(variant) :- 'M'(case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]})),!.
+  test(let) :- 'M'((let(x:int=poly(1:int));x)).
+  test(let) :- 'M'((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));id!'%x1')).
+  test(let) :- 'M'((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));id!int$1)).
+:- end_tests('M').
 
-  test(record) :- test(([x=1,y=2]#x), Q),!,Q=(([x=1,y=2]:[x:int,y:int])#x,int).
-  test(record) :- test(([x=1,y=2]#y), Q),!,Q=(([x=1,y=2]:[x:int,y:int])#y,int).
-  test(record) :- test(([x=(λ(x,x)$1),y=2]#x), Q),!,Q==(([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x,int).
-  test(record) :- test((modify([x=1,y=2],x,2)), Q),!,Q==(modify([x=1,y=2]:[x:int,y:int],x,2),[x:int,y:int]).
-  test(record) :- test((λ(z,[y=z])$10), Q),!,Q==(λ(z:int,[y=z])$10,[y:int]).
-  test(record) :- test((modify((λ(z,[x=1,y=z])$10),x,2)), Q),!,Q==(modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2),[x:int,y:int]).
-  test(variant) :- test({[eint=1]},Q),!,Q==({[eint=1]}:'%x0',∀('%x0',{[eint:int]},'%x0')).
-  test(variant) :- test((case({[eint=1]},{[eint=λ(x,x)]})),Q),!,Q==(case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}),int).
-  test(variant) :- test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x)]})),Q),!,Q==(case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}),int).
-  test(variant) :- test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x),b=λ(x,x)]})),Q),!,Q==(case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}),int).
-  test(let) :- test(let(x=1);x,Q),!,Q==((let(x:int=poly(1:int));x),int).
-  test(let) :- test(let(id=λ(x,x));id,Q),!,
-    Q=((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));x(id,'%x1')),∀('%x1',u,('%x1'->'%x1'))).
-  test(let) :- test(let(id=λ(x,x));id$1,Q),!,
-    Q=((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));x(id,int)$1),int).
+test(A,(M_:T_)) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_),M(M_),T_=T1,!.
+:- begin_tests(typing).
+  test(int)   :- test(10,   10   :int).
+  test(true)  :- test(true, true :bool).
+  test(false) :- test(false,false:bool).
+  test(λ)     :- test(λ(x,x),
+                      λ(x:'%x0',x) : ∀('%x0',u,('%x0'->'%x0'))).
+  test(app)   :- test((λ(x,x)$1),
+                      (λ(x:int,x)$1): int).
+  %test(app)  :- test(λ(t::u,λ(x:t,x)) , ∀(t,u,(t->t)).
+  %test(tapp) :- test((λ(t::u,λ(x:t,x)) ! int), int->int).
+  test(record) :- test([x=1,y=2],
+                       [x=1,y=2]:[x:int,y:int]).
+  test(record)  :- test(([x=1,y=2]#x),
+                       (([x=1,y=2]:[x:int,y:int])#x):int).
+  test(record)  :- test(([x=1,y=2]#y),
+                       (([x=1,y=2]:[x:int,y:int])#y):int).
+  test(record)  :- test(([x=(λ(x,x)$1),y=2]#x),
+                       (([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x):int).
+  test(record)  :- test((modify([x=1,y=2],x,2)),
+                        (modify([x=1,y=2]:[x:int,y:int],x,2)):[x:int,y:int]).
+  test(record)  :- test((λ(z,[y=z])$10),
+                        (λ(z:int,[y=z])$10):[y:int]).
+  test(record)  :- test(λ(z,z#a),
+                        λ(z:'%x2',(z:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))).
+  test(record)  :- test(modify((λ(z,[x=1,y=z])$10),x,2),
+                        modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int]).
+  test(variant) :- test({[eint=1]},
+                       ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0')).
+  test(variant) :- test(case({[eint=1]},{[eint=λ(x,x)]}),
+                        case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}):int).
+  test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x)]}),
+                        case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}):int).
+  test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x),b=λ(x,x)]}),
+                        case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}):int).
+  test(let) :- test(let(x=1);x,
+                   (let(x:int=poly(1:int));x):int).
+  test(let) :- test(let(id=λ(x,x));id,
+                   (let(id: ∀('%x0',u,('%x0'->'%x0'))
+                          =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!'%x1'))
+                   : ∀('%x1',u,('%x1'->'%x1'))).
+  test(let) :- test(let(id=λ(x,x));id$1,
+                   (let(id: ∀('%x0',u,('%x0'->'%x0'))
+                          =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!int)$1) : int).
+  test(let) :- test(let(id=λ(x,λ(y,x)));id$1$2,
+                   (let(id: ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))
+                          = poly(λ(x:'%x0',λ(y:'%x1',x)): ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))));
+                          id!int!int$1$2):int).
 
 :- end_tests(typing).
 

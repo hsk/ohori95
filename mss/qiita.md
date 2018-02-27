@@ -56,6 +56,14 @@ v ::= cb | λ(x,e) | record(l=v) | {[l=v]}.
 式eにlet式がありますが、型の記述はありません。
 
 ```prolog
+'M' ::= x | 'M'!q | cb | λ(x:q,'M') | ('M' $ 'M') | poly('M':q) | (let(x:q = 'M');'M')
+    | record(l='M') | ('M':q) # l | modify('M':q,l,'M')
+    | ({[l='M']}:q) | case('M',variant(l='M')).
+```
+
+`M` は型付きの `Λlet#` システムです。
+
+```prolog
 % Reduction rules
 
 ev(H/R,(V1$E2),(V1$E2_)) :- v(V1),\+v(E2),!,ev(H/R,E2,E2_).
@@ -125,7 +133,7 @@ ksubはカインドに対する置換処理、
 ```prolog
 msub(S,X,N_) :- x(X),member(N/X,S),msub(S,N,N_).
 msub(_,X,X) :- x(X).
-msub(S,x(X,T),x(X_,T)) :- msub(S,X,X_).
+msub(S,X!T,X_!T) :- msub(S,X,X_).
 msub(_,CB,CB) :- cb(CB).
 msub(S,λ(X:Q,M),λ(X:Q,M_)) :- subtract(S,[_/X],S_),msub(S_,M,M_).
 msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
@@ -142,7 +150,7 @@ msubは変換後の言語Λlet#に対する置換処理
 
 ```prolog
 mtsub(S,X,N_) :- x(X),member(N/X,S),mtsub(S,N,N_).
-mtsub(S,x(X,T),x(X_,T_)) :- tsub(S,T,T_),mtsub(S,X,X_).
+mtsub(S,X!T,X_!T_) :- tsub(S,T,T_),mtsub(S,X,X_).
 mtsub(S,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub(S,Q,Q_),mtsub(S,M,M_).
 mtsub(S,(M1$M2),(M1_$M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
 mtsub(S,(M!Q),(M_!Q_)) :- mtsub(S,M,M_), tsub(S,Q,Q_).
@@ -297,7 +305,7 @@ uはユニフィケーションを行う述語です。
 % alorighm WK
 
 foldxq((X,∀(T_,K,Q),Ks,S),(X_,Q_,[Si::K|Ks_],[Si/T_|S_])) :-
-  fresh(Si),!,foldxq((x(X,Si),Q,Ks,S),(X_,Q_,Ks_,S_)).
+  fresh(Si),!,foldxq((X!Si,Q,Ks,S),(X_,Q_,Ks_,S_)).
 foldxq((X,Q,Ks,S),(X,Q,Ks,S)).
 
 cls(K, _, ∀(t,k,τ), (K,∀(t,k,τ))).
@@ -503,35 +511,58 @@ sicstus prolog のモードにして mss モジュールを読み込みます。
 型推論のテスト
 
 ```prolog
-test(A,(M_,T_)) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T_)),mtsub(S,M,M_).
+test(A,(M_:T_)) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_),M(M_),T_=T1,!.
 :- begin_tests(typing).
-  test(int) :- test(10,Q),!,Q=(10,int).
-  test(true) :- test(true,Q),!,Q=(true,bool).
-  test(false) :- test(false,Q),!,Q=(false,bool).
-  test(λ) :- test(λ(x,x), Q),!,Q=(λ(x:'%x0',x),∀('%x0',u,('%x0'->'%x0'))).
-  test(app) :- test((λ(x,x)$1), Q),!,Q=(λ(x:int,x)$1,int).
-%  test(app) :- test(λ(t::u,λ(x:t,x)) , Q),!,Q= ∀(t,u,(t->t)).
-%  test(tapp) :- test((λ(t::u,λ(x:t,x)) ! int), Q),!,Q=(int->int).
-  test(record) :- test(([x=1,y=2]), Q),!,Q=([x=1,y=2],[x:int,y:int]).
-
-  test(record) :- test(([x=1,y=2]#x), Q),!,Q=(([x=1,y=2]:[x:int,y:int])#x,int).
-  test(record) :- test(([x=1,y=2]#y), Q),!,Q=(([x=1,y=2]:[x:int,y:int])#y,int).
-  test(record) :- test(([x=(λ(x,x)$1),y=2]#x), Q),!,Q==(([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x,int).
-  test(record) :- test((modify([x=1,y=2],x,2)), Q),!,Q==(modify([x=1,y=2]:[x:int,y:int],x,2),[x:int,y:int]).
-  test(record) :- test((λ(z,[y=z])$10), Q),!,Q==(λ(z:int,[y=z])$10,[y:int]).
-  test(record) :- test((modify((λ(z,[x=1,y=z])$10),x,2)), Q),!,Q==(modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2),[x:int,y:int]).
-  test(variant) :- test({[eint=1]},Q),!,Q==({[eint=1]}:'%x0',∀('%x0',{[eint:int]},'%x0')).
-  test(variant) :- test((case({[eint=1]},{[eint=λ(x,x)]})),Q),!,Q==(case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}),int).
-  test(variant) :- test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x)]})),Q),!,Q==(case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}),int).
-  test(variant) :- test((case((λ(z,{[eint=z]})$1),{[eint=λ(x,x),b=λ(x,x)]})),Q),!,Q==(case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}),int).
-  test(let) :- test(let(x=1);x,Q),!,Q==((let(x:int=poly(1:int));x),int).
-  test(let) :- test(let(id=λ(x,x));id,Q),!,
-    Q=((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));x(id,'%x1')),∀('%x1',u,('%x1'->'%x1'))).
-  test(let) :- test(let(id=λ(x,x));id$1,Q),!,
-    Q=((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));x(id,int)$1),int).
-
+  test(int)   :- test(10,   10   :int).
+  test(true)  :- test(true, true :bool).
+  test(false) :- test(false,false:bool).
+  test(λ)     :- test(λ(x,x),
+                      λ(x:'%x0',x) : ∀('%x0',u,('%x0'->'%x0'))).
+  test(app)   :- test((λ(x,x)$1),
+                      (λ(x:int,x)$1): int).
+  %test(app)  :- test(λ(t::u,λ(x:t,x)) , ∀(t,u,(t->t)).
+  %test(tapp) :- test((λ(t::u,λ(x:t,x)) ! int), int->int).
+  test(record) :- test([x=1,y=2],
+                       [x=1,y=2]:[x:int,y:int]).
+  test(record)  :- test(([x=1,y=2]#x),
+                       (([x=1,y=2]:[x:int,y:int])#x):int).
+  test(record)  :- test(([x=1,y=2]#y),
+                       (([x=1,y=2]:[x:int,y:int])#y):int).
+  test(record)  :- test(([x=(λ(x,x)$1),y=2]#x),
+                       (([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x):int).
+  test(record)  :- test((modify([x=1,y=2],x,2)),
+                        (modify([x=1,y=2]:[x:int,y:int],x,2)):[x:int,y:int]).
+  test(record)  :- test((λ(z,[y=z])$10),
+                        (λ(z:int,[y=z])$10):[y:int]).
+  test(record)  :- test(λ(z,z#a),
+                        λ(z:'%x2',(z:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))).
+  test(record)  :- test(modify((λ(z,[x=1,y=z])$10),x,2),
+                        modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int]).
+  test(variant) :- test({[eint=1]},
+                       ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0')).
+  test(variant) :- test(case({[eint=1]},{[eint=λ(x,x)]}),
+                        case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}):int).
+  test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x)]}),
+                        case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}):int).
+  test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x),b=λ(x,x)]}),
+                        case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}):int).
+  test(let) :- test(let(x=1);x,
+                   (let(x:int=poly(1:int));x):int).
+  test(let) :- test(let(id=λ(x,x));id,
+                   (let(id: ∀('%x0',u,('%x0'->'%x0'))
+                          =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!'%x1'))
+                   : ∀('%x1',u,('%x1'->'%x1'))).
+  test(let) :- test(let(id=λ(x,x));id$1,
+                   (let(id: ∀('%x0',u,('%x0'->'%x0'))
+                          =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!int)$1) : int).
+  test(let) :- test(let(id=λ(x,λ(y,x)));id$1$2,
+                   (let(id: ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))
+                          = poly(λ(x:'%x0',λ(y:'%x1',x)): ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))));
+                          id!int!int$1$2):int).
 :- end_tests(typing).
 ```
+
+型推論しながら、式の変換も行うため、このテストを見ると、λlet#とΛlet#の対応がわかります。
 
 テストの実行
 

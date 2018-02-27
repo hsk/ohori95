@@ -33,6 +33,10 @@ e ::= x | cb | λ(x,e) | (e $ e) | (let(x=e);e)
 
 v ::= cb | λ(x,e) | record(l=v) | {[l=v]}.
 
+'M' ::= x | 'M'!q | cb | λ(x:q,'M') | ('M' $ 'M') | poly('M':q) | (let(x:q = 'M');'M')
+    | record(l='M') | ('M':q) # l | modify('M':q,l,'M')
+    | ({[l='M']}:q) | case('M',variant(l='M')).
+
 % Reduction rules
 
 ev(H/R,(V1$E2),(V1$E2_)) :- v(V1),\+v(E2),!,ev(H/R,E2,E2_).
@@ -85,7 +89,7 @@ ksub(S,{LQs},{LQs_}) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 
 msub(S,X,N_) :- x(X),member(N/X,S),msub(S,N,N_).
 msub(_,X,X) :- x(X).
-msub(S,x(X,T),x(X_,T)) :- msub(S,X,X_).
+msub(S,(X!T),(X_!T)) :- msub(S,X,X_).
 msub(_,CB,CB) :- cb(CB).
 msub(S,λ(X:Q,M),λ(X:Q,M_)) :- subtract(S,[_/X],S_),msub(S_,M,M_).
 msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
@@ -98,7 +102,7 @@ msub(S,{[L=M]}:Q,{[L=M_]}:Q) :- msub(S,M,M_).
 msub(S,case(M,{LMs}),case(M_,{LMs_})) :- msub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
 
 mtsub(S,X,N_) :- x(X),member(N/X,S),mtsub(S,N,N_).
-mtsub(S,x(X,T),x(X_,T_)) :- tsub(S,T,T_),mtsub(S,X,X_).
+mtsub(S,(X!T),(X_!T_)) :- tsub(S,T,T_),mtsub(S,X,X_).
 mtsub(S,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub(S,Q,Q_),mtsub(S,M,M_).
 mtsub(S,(M1$M2),(M1_$M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
 mtsub(S,(M!Q),(M_!Q_)) :- mtsub(S,M,M_), tsub(S,Q,Q_).
@@ -238,7 +242,7 @@ u(([((τ11->τ21),(τ12->τ22))|E],K,S,SK) ⟹ (E_,K,S,SK)) :-
 % alorighm WK
 
 foldxq((X,∀(T_,K,Q),Ks,S),(X_,Q_,[Si::K|Ks_],[Si/T_|S_])) :-
-  fresh(Si),!,foldxq((x(X,Si),Q,Ks,S),(X_,Q_,Ks_,S_)).
+  fresh(Si),!,foldxq(((X!Si),Q,Ks,S),(X_,Q_,Ks_,S_)).
 foldxq((X,Q,Ks,S),(X,Q,Ks,S)).
 
 cls(K, _, ∀(t,k,τ), (K,∀(t,k,τ))).
@@ -302,5 +306,4 @@ wk(K,T,(let(X=E1);E2),(K2,S21,(let(X:σ1_=poly(M1_:σ1_)); M2),τ2)) :-
   tsub(S2,σ1,σ1_),msub(S2,M1,M1_),
   union(S2,S1,S21).
 
-:- end_var_names(_).
 :- end_var_names(_).
