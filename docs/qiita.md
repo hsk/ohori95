@@ -4,7 +4,7 @@
 とりあえず、気がかりになっていたので、全てではありませんが時を遡ってアドベントカレンダーの最後の記事をアップする次第であります。
 
 ここでは、Prologを用いて Ohori [^1] の多相レコード計算の実装を行います。
-多相レコードの論文はかなり細かいところまで書かれているのですが手始めに最初にでてくる簡単な型付きの二階の多相レコード計算システムを実装します。
+多相レコードの論文はかなり細かいところまで書かれているのですが手始めに最初にでてくる簡単な型付きの二階の多相レコード計算システムを実装します。ソースコードの全体は github [^2] からダウンロードできます。
 
 ## 1. Second-Order System Λ∀,# の実装
 
@@ -358,3 +358,6 @@ sicstus prolog的なモードにしてから、sos.plを読み込みます。
 
 [^1]: A Polymorphic Record Calculus and Its Compilation
 http://www.pllab.riec.tohoku.ac.jp/~ohori/research/toplas95.pdf
+
+[^1]: ソースコードのリポジトリ
+https://github.com/hsk/ohori95
