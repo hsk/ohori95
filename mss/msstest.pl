@@ -1,6 +1,5 @@
 :- expects_dialect(sicstus).
-:- current_prolog_flag(argv, [V]), use_module(V)
-  ; use_module(mss).
+:- use_module(mss).
 
 :- begin_tests(avs).
   test(i) :- i(1).
