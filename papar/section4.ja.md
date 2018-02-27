@@ -245,9 +245,32 @@
   Connor et al. [1989] では、インデックス値を渡すという一般的な考え方が提案されました。
   私たちの元々の貢献の1つは、（1）多相レコード計算の任意の型の正しい正しい項のための正しい実装項を常に構築する体系的コンパイルアルゴリズムを確立すること、（2）正当性を形式的に確立することです。
 
+# 2 Λ∀,#
+
+    M ::= x | cb | λx:σ.M | M M | λt::k.M | M σ
+        | {l=M,···,l=M} | M#l | modify(M,l,M)
+        | (<l=M>:σ) | case M of <l=M,···,l=M>
+
+# 3.1 An ML-Style Polymorphic Record Calculus : λlet,#
+
+    e ::= x | cb | λx.e | e e | let x=e in e
+        | {l=e,···,l=e} | e#l | modify(e,l,e)
+        | <l=e> | case e of <l=e,···,l=e>
+
+    τ ::= t | b | τ→τ | {l:τ,···,l:τ} | <l:τ,···,l:τ>
+    σ ::= τ | ∀t::k.σ
+    k ::= U | {{l:τ,···,l:τ}} | <<l:τ,···,l:τ>>
+
 # 3.3 Explicitly Typed Calculus Λlet,# Corresponding to λlet,#
 
-    M ::= (x τ···τ) | cb | λx:τ.M | M M | Poly(M:σ) | let x:σ = M in M
+  Λlet,# はmssでλlet,#はtyped mss tmssとよぼう
+
+    M ::= (x τ···τ) 具体化
+        | cb
+        | λx:τ.M
+        | M M
+        | Poly(M:σ) 一般化
+        | let x:σ = M in M
         | {l=M,···,l=M} | M:τ#l | modify(M:τ,l,M)
         | (<l=M>:τ) | case M of <l=M,···,l=M>
 

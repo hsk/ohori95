@@ -1,3 +1,34 @@
+# Prologで実装した多相レコード計算
+
+## 要約
+
+Ohoriによる多相レコード計算をPrologにより実装しました。
+できるだけ論文に忠実に作ることを目的としています。
+
+## はじめに
+
+- 1. sos.pl Λ∀# Second-Order System
+- 2. mss.pl λlet# Ml-Style type inerence System
+- 3. tmss.pl Λlet# Typed Ml-Style System
+- 4. ics.pl λlet[] Implementation Calculs System
+- 5. compiler.pl λlet[] へのコンパイラ
+
+プログラムは大きく分けて、sos.pl,mss.pl,tmss.pl,ics.pl,compiler.plに分かれています。
+sos.plにはsostest.plが対応しています。
+sosはSecond Order Systemの略で、多相レコード計算の極めて単純なシステムです。
+このプログラムは他のプログラムとは独立してみることが出来ます。
+
+mss は ML スタイルの型推論システムであり ML スタイルの多相レコード計算です。
+tmss は ML スタイルの型推論システムが推論したあとの型がついたMLスタイルの多相レコード計算です。
+ics は ML スタイルの型推論システムをコンパイルしたあとのシステムです。
+compiler.pl は tmss から ics へのコンパイラです。
+
+## 1. Second-Order System Λ∀,# の実装
+
+まずは演算子の優先順位定義と、rtgモジュール読み込み、マクロ定義があります。
+rtgモジュールは構文定義をBNF風の記述を可能にするライブラリです。
+
+```prolog
 % Second-Order System Λ∀,#
 :- op(600,xfx,[::,#]).
 :- op(650,yfx,[$,!]).
@@ -6,6 +37,11 @@
 :- op(1200,xfx,[--]).
 :- use_module(rtg).
 term_expansion(A--B,R) :- next_term_expansion(B:-A,R).
+```
+
+構文定義
+
+```prolog
 % Syntaxs
 
 syntax(k).
@@ -26,8 +62,22 @@ cb ::= true | false | i.
     | {[l='M']}:σ | case('M',variant(l='M')).
 q(Q) :- σ(Q).
 m(M) :- 'M'(M).
-:- begin_var_names(['^[σlxktcbi]'],['^(true|bool|int)$']).
+```
 
+構文は以上のようにrtgライブラリを用いることで定義されています。
+論文との相違点は、型τを省略している点、レコードを[]で、ヴァリアントを{[]}で表している点などがあります。
+最後のq,mの定義はテスト用にあるだけなので消したいと思います。
+
+```prolog
+:- begin_var_names(['^[σlxktcbi]'],['^(true|bool|int)$']).
+```
+
+rtgライブラリには小文字のatomを変数に書き換えるマクロbegin_var_names/2およびend_var_names/1があります。
+このライブラリを使うと正規表現を用いて小文字のアトムを変数に書き換えて論文により近い記述を可能にします。
+ここでは、σlxktcbiから始まるアトムを変数とみなすと宣言しています。
+第二パラメータではtrue,bool,intは含まないと指定しています。
+
+```
 % Kinding rules
 
 K ⊢     t :: lσs  :- member(t::lσ2s,K), intersection(lσ2s,lσs,lσs).
@@ -35,7 +85,11 @@ _ ⊢  lσ2s :: lσs  :- intersection(lσ2s,lσs,lσs).
 K ⊢     t ::{lσs} :- member(t::{lσ2s},K), intersection(lσ2s,lσs,lσs).
 _ ⊢ {lσ2s}::{lσs} :- intersection(lσ2s,lσs,lσs).
 _ ⊢     _ :: u.
+```
 
+カインド付けの規則はこのように定義できます。
+
+```prolog
 % Substitutions
 
 tsub(S,t,N_) :- t(t),member(N/t,S),!,tsub(S,N,N_).
@@ -73,7 +127,11 @@ mtsub(S,modify(M1,l,M2),modify(M1_,l,M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
 mtsub(S,{[l=M]}:σ,{[l=M_]}:σ) :- mtsub(S,M,M_).
 mtsub(S,case(M,{lMs}),case(M_,{lMs_})) :- mtsub(S,M,M_),maplist({S}/[l=Mi,l=Mi_]>>mtsub(S,Mi,Mi_),lMs,lMs_).
 mtsub(_,M,M).
+```
 
+長いのですが、置換の規則は以上のように定義できます。
+
+```prolog
 % Reduction rules
 
 (λ(x:_,M)$N)             ⟹ M_              :- msub([N/x], M,M_).       % (β)
@@ -89,7 +147,11 @@ case(M, {lMs})           ⟹ case(M_, {lMs}) :- M ⟹ M_.
 
 M ⟹* M_ :- M ⟹ M1,!, M1 ⟹* M_.
 M ⟹* M.
+```
 
+これは還元規則、評価するための規則です。
+
+```prolog
 % Free Type variables
 
 ftv(x,[x]) :- x(x).
@@ -103,7 +165,11 @@ kftv(u,[]).
 kftv(lσs,FTVs) :- foldl([_:σ,FTV,FTV_]>>(ftv(σ,FTVi),union(FTV,FTVi,FTV_)),lσs,[],FTVs).
 kftv({lσs},FTVs) :- foldl([_:σ,FTV,FTV_]>>(ftv(σ,FTVi),union(FTV,FTVi,FTV_)),lσs,[],FTVs).
 tftv(lσs,FTVs) :- foldl([_:σ,FTV,FTV_]>>(ftv(σ,FTVi),union(FTV,FTVi,FTV_)),lσs,[],FTVs).
+```
 
+自由型変数を求めるにはftv,kftvを用います。
+
+```prolog
 % Type system
 
 (_,T) ▷ x : σ    :- member(x:σ,T).                            % VAR
@@ -149,4 +215,29 @@ maplist({K,T,σ}/[li=Mi,li:σi]>>((K,T) ▷ Mi : (σi->σ)),lMs,lσs)
 (K,T) ▷ case(M,{lMs}) : σ.
 
 :- end_var_names(_).
+```
 
+型システムは自然演繹スタイルで以上のように定義できて、アルゴリズミックに評価できます。
+このシステムは実に単純でとても簡単に実装できました。
+
+
+## 2. mss は ML スタイルの型推論システムであり ML スタイルの多相レコード計算です。
+
+## 3. tmss
+
+## 4. ics は実装計算システムの略です。
+
+多相レコード計算のための効率的なコンパイル方法を確立するために、まず、実装計算を定義します。
+ここで、レコードは、直接索引付けによって要素にアクセスするベクターとして表され、バリアントは、スイッチステートメント内の関数のベクター内の位置を示す自然数でタグ付けされた値として表されます。
+
+ics.pl は実装計算のみを持つことにします。
+
+## 5. mss から ics へのコンパイラ
+
+次に、型推論アルゴリズムによって得られた型情報を用いて、多相レコード計算を実装計算に変換するアルゴリズムを開発します。
+コンパイルアルゴリズムの正確性が証明されています。
+つまり、コンパイルアルゴリズムは、プログラムの入力と操作の両方の動作を保持するために示されています。
+
+プログラムは記号が多用されており、小文字も変数として用いたいのでマクロによって小文字の本来は変数ではないアトムの値を変数に置き換えています。
+
+C がコンパイルのアルゴリズムだと。
