@@ -130,7 +130,19 @@
 
 test(_,M:_,R) :- c([],[],M,R),!.
 test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
+/*
+ok 7 todo let1
+ok 6 todo let2
+ok 5 todo let3
+4 todo variant1
+3 todo variant2
+2 todo variant3
+1 todo variant4
 
++
+
+1 let idx
+*/
 :- begin_tests(compile).
   test(int)   :- test(10,   10   :int,10).
   test(true)  :- test(true, true :bool,true).
@@ -181,19 +193,21 @@ test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
   test(let) :- test(let(x=1);x,
                    (let(x:int=poly(1:int));x):int,
                    let(x=1);x).
-                   /*
   test(let) :- test(let(id=λ(x,x));id,
                    (let(id: ∀('%x0',u,('%x0'->'%x0'))
                           =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!'%x1'))
-                   : ∀('%x1',u,('%x1'->'%x1'))).
+                   : ∀('%x1',u,('%x1'->'%x1')),
+                   ['%x1'::u],
+                   let(id=λ(x,x));id).
   test(let) :- test(let(id=λ(x,x));id$1,
                    (let(id: ∀('%x0',u,('%x0'->'%x0'))
-                          =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!int)$1) : int).
+                          =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!int)$1) : int,
+                    let(id=λ(x,x));id$1).
   test(let) :- test(let(id=λ(x,λ(y,x)));id$1$2,
                    (let(id: ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))
                           = poly(λ(x:'%x0',λ(y:'%x1',x)): ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))));
-                          id!int!int$1$2):int).
-  */
+                          id!int!int$1$2):int,
+                    let(id=λ(x,λ(y,x)));id$1$2).
 :- end_tests(compile).
 
 :- run_tests.

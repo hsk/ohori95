@@ -161,7 +161,8 @@ test(A,(M_:T_),K_) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M
   test(let) :- test(let(id=λ(x,x));id,
                    (let(id: ∀('%x0',u,('%x0'->'%x0'))
                           =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!'%x1'))
-                   : ∀('%x1',u,('%x1'->'%x1'))).
+                   : ∀('%x1',u,('%x1'->'%x1')),
+                   ['%x1'::u]).
   test(let) :- test(let(id=λ(x,x));id$1,
                    (let(id: ∀('%x0',u,('%x0'->'%x0'))
                           =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!int)$1) : int).

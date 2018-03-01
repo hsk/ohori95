@@ -82,6 +82,14 @@ csub(S,modify(C1,I,C2),modify(C1_,I,C2_)) :- csub(S,C1,C1_), csub(S,C2,C2_).
 csub(S,{[I=C]},{[I_=C_]}) :- csub(S,I,I_),csub(S,C,C_).
 csub(S,switch(C,Cs),switch(C_,Cs_)) :- csub(S,C,C_),maplist({S}/[Ci,Ci_]>>csub(S,Ci,Ci_),Cs,Cs_).
 
+tsub(S,X,N_) :- t(X),member(N/X,S),tsub(S,N,N_).
+tsub(_,X1,X1) :- t(X1).
+tsub(_,B,B) :- b(B).
+tsub(S,(Q1->Q2),(Q1_->Q2_)) :- tsub(S,Q1,Q1_),tsub(S,Q2,Q2_).
+tsub(S,LMs,LMs_) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
+tsub(S,{LMs},{LMs_}) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
+tsub(S,∀(T,K,Q),∀(T,K_,Q_)) :- subtract(S,[_/T],S_),ksub(S_,K,K_),tsub(S_,Q,Q_).
+
 % 4.2 The Type System of λlet,[]
 
 l ::= atom.
@@ -141,6 +149,7 @@ idxSet(K,Is) :- foldl([t::k,Is1,Is3]>>(idxSet(t::k,Is2),union(Is1,Is2,Is3)),K,[]
 ∀(t2,[a::bool,b::int],∀(t3,[a::t2],t2->t3)) *=
   ∀(t2,[a::bool,b::int],∀(t3,[a::t2],idx(a,t2,idx(b,t2,idx(a,t3,t2->t3))))) */
 
+getT(∀(ti,u,t),[ti::u|L],T) :- !,getT(t,L,T).
 getT(∀(ti,ki,t),[ti::ki_|L],T) :- sort(ki,ki_),getT(t,L,T).
 getT(T,[],T).
 
@@ -162,8 +171,6 @@ bbb1(t::K,T,R) :- foldr([li::ti,T1,idx(li,t,T1)]>>!,K,T,R).
 lk(K,LK) :- idxSet(K,Is), maplist([idx(l,t),L:idx(l,t)]>>fresh(L),Is,LK).
 
 
-xts(Ts,x,x!Ts) :- x(x),!.
-xts(Ts,M!T,M_) :- xts([T|Ts],M,M_),!.
 getL(L,idx(li,ti,t),[Ii:idx(li,ti)|L_],[Ii|Is]) :- fresh(Ii),getL(L,t,L_,Is). 
 getL(L,_,L,[]).
 addλ([],t,t).
@@ -191,8 +198,8 @@ c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,
           C1 = C(L{I1:idx(l1,t1'),···,In:idx(lm,tm')},T,M1) (I1,···,Im fresh)
       in λI1···λIm.C1
 */
-c(L,T,poly(M1:t), C1_) :- t *= t_, getT(t_,_,Idxs),getL(L,Idxs,L_,Is),c(L_,T,M1,C1),addλ(Is,C1,C1_).
-c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1), σ *= σ_, c(L,[x:σ_|T],M2,C2).
+c(L,T,poly(M1:t), C1_) :- writeln(poly:t),t *= t_, writeln(poly2:t_),getT(t_,_,Idxs),getL(L,Idxs,L_,Is),c(L_,T,M1,C1),addλ(Is,C1,C1_).
+c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1),writeln(T/let(x:σ=M1)/M2), σ *= σ_, c(L,[x:σ_|T],M2,C2).
 /*
 C(L,T,(x τ1···τn)) =
   let (∀t1::k1 ···tn::kn.idx(l1,t1') ⇒···idx(lm,tm') ⇒ τ) = T(x) 関数を取り出して
@@ -200,9 +207,21 @@ C(L,T,(x τ1···τn)) =
                           Ïi = | i if |idx(l,S(ti'))| = i
                                 | I if |idx(l,S(ti'))| is undefined and (I:idx(l,S(ti'))) ∈ L
                       in (x Ï1···Ïm)
+
+                      R= ∀(t2,[a::bool,b::int],∀(t3,[a::t2],idx(a,t2,idx(b,t2,idx(a,t3,(t2->t3)))))),!.
+
 */
-c(L,T,(x1!τ1), (x!Ï1)) :- xts([],x1!τ1,x!τs), member(x: ∀(t1,k1,(idx(l1,t1_) -> τ)), T),
-                        sub([τ1/t1],ti_,ti2),
-                        (idx(l,ti2,Ï) ; member(Ï:idx(l,ti2,L))).
+c(L,T,(x1!τ1), x) :- writeln(x1!τ1),xts([],x1!τ1,x!τs),writeln(T/x!τs),
+                          member(x: σ, T),mks(σ,τs,S,σ_),
+                        writeln("koko":σ/S/σ_).
+                        %foldr(cdot(L,S),τs,x,x_).
+
+cdot(L,S,τi,xi,xi!Ï) :- tsub(S,τi,Sti),writeln(sti/Sti),
+  [] ⊢ Sti::ks,!, (idxSet(Sti::ks,Idxs),writeln(idxs/Idxs),nth1(Ï,Idxs,idx(l,Sti))
+  ; writeln("l"/L), member(Ï:idx(l,Sti),L)).
+xts(Ts,x,x!Ts) :- x(x),!.
+xts(Ts,M!T,M_) :- xts([T|Ts],M,M_),!.
+mks(σ,[],[],σ).
+mks(∀(t,_,σ),[τ|τs],[τ/t|S],σ_) :- mks(σ,τs,S,σ_).
 
 :- end_var_names(_).
