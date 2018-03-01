@@ -149,7 +149,7 @@ test(A,(M_:T_),K_) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M
   test(record)  :- test(modify((λ(z,[x=1,y=z])$10),x,2),
                         modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int]).
   test(variant) :- test({[eint=1]},
-                       ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0')).
+                       ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0'),['%x0'::{[eint:int]}]).
   test(variant) :- test(case({[eint=1]},{[eint=λ(x,x)]}),
                         case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}):int).
   test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x)]}),

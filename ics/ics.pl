@@ -187,7 +187,7 @@ c(L,T,(M:τ)#l,C#[Ï]) :- writeln(a),
    writeln(c), idxSet(τ::ks,Idxs),writeln(d:τ/ks/Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
 c(L,T,modify(M1:τ,l,M2),modify(C1,Ï,C2)) :- c(L,T,M1,C1), c(L,T,M2,C2),
                                     [] ⊢ τ::ks,!, idxSet(τ::ks,Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
-c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), (idx(l,τ,Ï); member(Ï:idx(l,τ),L)).                  
+c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), [] ⊢ τ::ks,idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).                  
 c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,T,Mi,Ci), lMs,Cs).
 
 % コンパイルでたしか、レコードフィールドにアクセスする関数をまとめるとかだったはず
@@ -214,7 +214,7 @@ C(L,T,(x τ1···τn)) =
 c(L,T,(x1!τ1), x) :- writeln(x1!τ1),xts([],x1!τ1,x!τs),writeln(T/x!τs),
                           member(x: σ, T),mks(σ,τs,S,σ_),
                         writeln("koko":σ/S/σ_).
-                        %foldr(cdot(L,S),τs,x,x_).
+                        %foldr(cdot(L,S),τs,x,x_) todo.
 
 cdot(L,S,τi,xi,xi!Ï) :- tsub(S,τi,Sti),writeln(sti/Sti),
   [] ⊢ Sti::ks,!, (idxSet(Sti::ks,Idxs),writeln(idxs/Idxs),nth1(Ï,Idxs,idx(l,Sti))

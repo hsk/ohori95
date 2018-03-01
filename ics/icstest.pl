@@ -131,16 +131,6 @@
 test(_,M:_,R) :- c([],[],M,R),!.
 test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
 /*
-ok 7 todo let1
-ok 6 todo let2
-ok 5 todo let3
-4 todo variant1
-3 todo variant2
-2 todo variant3
-1 todo variant4
-
-+
-
 1 let idx
 */
 :- begin_tests(compile).
@@ -180,16 +170,19 @@ ok 5 todo let3
   test(record)  :- test(modify((λ(z,[x=1,y=z])$10),x,2),
                         modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int],
                         modify(λ(z,[1,z])$10,1,2)).
-                        /*
   test(variant) :- test({[eint=1]},
-                       ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0')).
+                       ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0'),
+                       ['%x0'::{[eint::int]}],
+                       {['%x3'=1]}).
   test(variant) :- test(case({[eint=1]},{[eint=λ(x,x)]}),
-                        case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}):int).
+                        case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}):int,
+                        switch({[1=1]},[λ(x,x)])).
   test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x)]}),
-                        case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}):int).
+                        case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}):int,
+                        switch(λ(z,{[1=z]})$1,[λ(x,x)])).
   test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x),b=λ(x,x)]}),
-                        case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}):int).
-                        */
+                        case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}):int,
+                        switch(λ(z,{[1=z]})$1,[λ(x,x),λ(x,x)])).
   test(let) :- test(let(x=1);x,
                    (let(x:int=poly(1:int));x):int,
                    let(x=1);x).
