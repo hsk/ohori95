@@ -154,9 +154,9 @@ test(_,M:_,R) :- c([],[],M,R),!.
   test(record)  :- test(([x=(λ(x,x)$1),y=2]#x),
                        (([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x):int,
                        [λ(x,x)$1,2]#[1]).
-  test(record)  :- test((modify([x=1,y=2],x,2)),
-                        (modify([x=1,y=2]:[x:int,y:int],x,2)):[x:int,y:int],
-                       R),writeln(R).
+  test(record)  :- test((modify([x=10,y=20],x,30)),
+                        (modify([x=10,y=20]:[x:int,y:int],x,30)):[x:int,y:int],
+                       modify([10,20],1,30)).
   /*
   test(record)  :- test((λ(z,[y=z])$10),
                         (λ(z:int,[y=z])$10):[y:int]).
