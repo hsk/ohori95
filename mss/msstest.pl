@@ -120,6 +120,7 @@
 :- end_tests('M').
 
 test(A,(M_:T_)) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_),M(M_),T_=T1,!.
+test(A,(M_:T_),K) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_),M(M_),T_=T1,!.
 :- begin_tests(typing).
   test(int)   :- test(10,   10   :int).
   test(true)  :- test(true, true :bool).

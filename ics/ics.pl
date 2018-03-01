@@ -8,10 +8,13 @@
 :- op(1200,xfx,[--]).
 :- op(700,xfx,[*=]).
 :- use_module(rtg).
+:- expects_dialect(sicstus).
 term_expansion(A--B,B:-A).
 
 foldr(_,[],S,S) :- !. % 畳み込み
 foldr(F,[X|Xs],S,S_) :- foldr(F,Xs,S,S1),!,call(F,X,S1,S_),!.
+reset :- bb_put(i,0).
+fresh(T) :- bb_get(i,I), format(atom(T),'%x~w',[I]), I1 is I + 1, bb_put(i,I1).
 
 list(A) ::= [] | [A | list(A)].
 record(A) ::= list(A).
@@ -91,15 +94,17 @@ k ::= u | record(l::τ) | variant(l::τ). % same as those of `λlet,#`
 
 % Fig. 6. Kinding rules for the ML-style type inference system λlet,#.
 
+
 :- begin_var_names(['^[τtxσkli]'],['^(true|bool|int)$']).
 
-_ ⊢ τ::u :- τ(τ).
 K ⊢ t::ks :- t(t),member(t::ks1,K),append(ks,_,ks1), ks \= [].
+_ ⊢ ts::ks :- maplist([l:t,l::t]>>!,ts,ks).
 _ ⊢ ts::ks :- maplist([l:t,k::t]>>!,ts,ks1), append(ks,_,ks1), ks \= [].
 _ ⊢ ts::[li::ti] :- member(li:ti,ts).
 K ⊢ t::{ks} :- t(t),member(t::{ks1},K),append(ks,_,ks1), ks \= [].
 _ ⊢ {ts}::{ks} :-  maplist([l:t,k::t]>>!,ts,ks1),append(ks,_,ks1), ks \= [].
 _ ⊢ {ts}::{[li::ti]} :- member(li:ti,ts).
+_ ⊢ τ::u :- τ(τ).
 
 % Fig. 13. Typing rules for the implementation calculus λlet,[].
 
@@ -120,8 +125,8 @@ _ ⊢ i : idx(li,{Variant}) :- i(i),nth1(i,Variant,li:_). % ICONST2
 % 4.3 Compilation Algorithm
 
 idxSet(t::u,[]).
-idxSet(t::F,Is) :- maplist([L:_,I]>>idx(L,t,I),F,Is).
-idxSet(t::{F},Is) :- maplist([L:_,I]>>idx(L,t,I),F,Is).
+idxSet(t::F,Is) :- maplist([L::_,idx(L,t)]>>!,F,Is).
+idxSet(t::{F},Is) :- maplist([L::_,idx(L,t)]>>!,F,Is).
 idxSet(∀(t,k,τ),Is) :- idSet(t::k,Is1),idxSet(τ,Is2),union(Is1,Is2,Is).
 idxSet(K,Is) :- foldl([t::k,Is1,Is3]>>(idxSet(t::k,Is2),union(Is1,Is2,Is3)),K,[],Is).
 
@@ -138,29 +143,38 @@ idxSet(K,Is) :- foldl([t::k,Is1,Is3]>>(idxSet(t::k,Is2),union(Is1,Is2,Is3)),K,[]
 
 getT(∀(ti,ki,t),[ti::ki_|L],T) :- sort(ki,ki_),getT(t,L,T).
 getT(T,[],T).
-Q *= R :- getT(Q,L,T),foldr(bbb1,L,T,T_),foldr([t::K,T1,∀(t,K,T1)]>>!,L,T_,R).
+
+% この定義は、次のように型の割り当てに拡張されます: (T)* = {x : (T(x))* |x ∈ dom(T)}
+T *= R :- maplist([x:t,x:t_]>> t *= t_,T,R).
+Q *= R :- getT(Q,L,T),L\=[],T*=T1,foldr(bbb1,L,T1,T2),foldr([t::K,T3,∀(t,K,T3)]>>!,L,T2,R).
+T *= T.
 bbb1(t::K,T,R) :- foldr([li::ti,T1,idx(li,t,T1)]>>!,K,T,R).
 
 /*
-  この定義は、次のように型の割り当てに拡張されます:
+  kind 割り当て `K` に対して、 `K` によって決定されるインデックス割り当て `LK` を 
+  
+    LK = {I : idx(l,t)|idx(l,t) ∈ IdxSet(K),each I fresh}
+  
+  として定義します。
 
-    (T)* = {x : (T(x))* |x ∈ dom(T)}
-
-  kind 割り当て `K` に対して、 `K` によって決定されるインデックス割り当て `LK` を `LK = {I : idx(l,t)|idx(l,t) ∈ IdxSet(K),each I fresh}` として定義します。
-  コンパイルアルゴリズムは、図15において、 `LK,(T)*` および `M` をとり、実装計算の項を計算するアルゴリズム `C` として与えられます。
-  `LK` は任意の対 `(l,t)` に対して多くても1つの `(I,idx(l,t)) ∈ LK` があるという性質を持っているので、 したがって、 `C` は決定論的アルゴリズムです。
-
-  このコンパイルでは、次の定理に示すように型が保持されます。
+  `LK` は任意の対 `(l,t)` に対して多くても1つの `(I,idx(l,t)) ∈ LK` があるという性質を持っている
 */
+lk(K,LK) :- idxSet(K,Is), maplist([idx(l,t),L:idx(l,t)]>>fresh(L),Is,LK).
+
+
 xts(Ts,x,x!Ts) :- x(x),!.
 xts(Ts,M!T,M_) :- xts([T|Ts],M,M_),!.
+getL(L,idx(li,ti,t),[Ii:idx(li,ti)|L_],[Ii|Is]) :- fresh(Ii),getL(L,t,L_,Is). 
+getL(L,_,L,[]).
+addλ([],t,t).
+addλ([Ii|Is],t,λ(Ii,t_)) :- addλ(Is,t,t_).
 
 c(_,_,x,x) :- x(x).
 c(_,_,CB,CB) :- cb(CB).
 c(L,T,λ(x:τ,M), λ(x,M_)):- c(L,[x:τ|T],M,M_).
 c(L,T,(M1$M2), (M1_$M2_)) :- c(L,T,M1,M1_), c(L,T,M2,M2_).
 c(L,T,LMs,Cs):- maplist([_=Mi,Ci]>>c(L,T,Mi,Ci),LMs,Cs).
-c(L,T,M:τ#l,C#[Ï]) :- c(L,T,M,C), (idx(l,τ,Ï) ; member(Ï:idx(l,τ,L))).
+c(L,T,(M:τ)#l,C#[Ï]) :- c(L,T,M,C), [] ⊢ τ::ks,!, idxSet(τ::ks,Idxs), (nth1(Ï,Idxs,idx(l,τ)) ; member(Ï:idx(l,τ),L)).
 c(L,T,modify(M1:τ,l,M2),modify(C1,Ï,C2)) :- c(L,T,M1,C1), c(L,T,M2,C2), (idx(l,τ,Ï);member(Ï:idx(l,τ),L)).
 c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), (idx(l,τ,Ï); member(Ï:idx(l,τ),L)).                  
 c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,T,Mi,Ci), lMs,Cs).
@@ -173,12 +187,8 @@ c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,
           C1 = C(L{I1:idx(l1,t1'),···,In:idx(lm,tm')},T,M1) (I1,···,Im fresh)
       in λI1···λIm.C1
 */
-/*
-c(L,T,poly(M1:∀t1::k1···∀tn::kn.τ1), λI1···λIm.C1) :-
-  let ∀t1::k1···∀tn::kn.idx(l1,ti_) ⇒ idx(lm,tm_) ⇒ τ1 = (∀t1::k1···∀tn::kn.τ1)∗
-      c(L{I1:idx(l1,t1_),···,In:idx(lm,tm_)},T,M1,C1) (I1,···,Im fresh)
-*/
-%c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1),c(L,[x:(σ)∗|T],M2,C2).
+c(L,T,poly(M1:t), C1_) :- t *= t_, getT(t_,_,Idxs),getL(L,Idxs,L_,Is),c(L_,T,M1,C1),addλ(Is,C1,C1_).
+c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1), σ *= σ_, c(L,[x:σ_|T],M2,C2).
 /*
 C(L,T,(x τ1···τn)) =
   let (∀t1::k1 ···tn::kn.idx(l1,t1') ⇒···idx(lm,tm') ⇒ τ) = T(x) 関数を取り出して
@@ -190,9 +200,5 @@ C(L,T,(x τ1···τn)) =
 c(L,T,(x1!τ1), (x!Ï1)) :- xts([],x1!τ1,x!τs), member(x: ∀(t1,k1,(idx(l1,t1_) -> τ)), T),
                         sub([τ1/t1],ti_,ti2),
                         (idx(l,ti2,Ï) ; member(Ï:idx(l,ti2,L))).
-
-foldxq((X,∀(T_,K,Q),Ks,S),(X_,Q_,[Si::K|Ks_],[Si/T_|S_])) :-
-  fresh(Si),foldxq(((X$Si),Q,Ks,S),(X_,Q_,Ks_,S_)).
-foldxq((X,Q,Ks,S),(X,Q,Ks,S)).
 
 :- end_var_names(_).
