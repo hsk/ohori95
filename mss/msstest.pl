@@ -120,7 +120,7 @@
 :- end_tests('M').
 
 test(A,(M_:T_)) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_),M(M_),T_=T1,!.
-test(A,(M_:T_),K) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_),M(M_),T_=T1,!.
+test(A,(M_:T_),K_) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_),M(M_),T_=T1,!,K=K_.
 :- begin_tests(typing).
   test(int)   :- test(10,   10   :int).
   test(true)  :- test(true, true :bool).
@@ -144,7 +144,8 @@ test(A,(M_:T_),K) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M_
   test(record)  :- test((λ(z,[y=z])$10),
                         (λ(z:int,[y=z])$10):[y:int]).
   test(record)  :- test(λ(z,z#a),
-                        λ(z:'%x2',(z:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))).
+                        λ(z:'%x2',(z:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1'))),
+                        ['%x1'::u,'%x2'::[a:'%x1']]).
   test(record)  :- test(modify((λ(z,[x=1,y=z])$10),x,2),
                         modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int]).
   test(variant) :- test({[eint=1]},

@@ -174,7 +174,10 @@ c(_,_,CB,CB) :- cb(CB).
 c(L,T,λ(x:τ,M), λ(x,M_)):- c(L,[x:τ|T],M,M_).
 c(L,T,(M1$M2), (M1_$M2_)) :- c(L,T,M1,M1_), c(L,T,M2,M2_).
 c(L,T,LMs,Cs):- maplist([_=Mi,Ci]>>c(L,T,Mi,Ci),LMs,Cs).
-c(L,T,(M:τ)#l,C#[Ï]) :- c(L,T,M,C), [] ⊢ τ::ks,!, idxSet(τ::ks,Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
+c(L,T,(M:τ)#l,C#[Ï]) :- writeln(a),
+  c(L,T,M,C),writeln(b),
+   [] ⊢ τ::ks,!,
+   writeln(c), idxSet(τ::ks,Idxs),writeln(d:τ/ks/Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
 c(L,T,modify(M1:τ,l,M2),modify(C1,Ï,C2)) :- c(L,T,M1,C1), c(L,T,M2,C2),
                                     [] ⊢ τ::ks,!, idxSet(τ::ks,Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
 c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), (idx(l,τ,Ï); member(Ï:idx(l,τ),L)).                  

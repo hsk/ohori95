@@ -129,6 +129,7 @@
 :- end_tests(*).
 
 test(_,M:_,R) :- c([],[],M,R),!.
+test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
 
 :- begin_tests(compile).
   test(int)   :- test(10,   10   :int,10).
@@ -150,20 +151,24 @@ test(_,M:_,R) :- c([],[],M,R),!.
                        [10,20]#[1]).
   test(record)  :- test(([x=10,y=20]#y),
                        (([x=10,y=20]:[x:int,y:int])#y):int,
-                       [10,20]#[2])).
+                       [10,20]#[2]).
   test(record)  :- test(([x=(λ(x,x)$1),y=2]#x),
                        (([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x):int,
                        [λ(x,x)$1,2]#[1]).
   test(record)  :- test((modify([x=10,y=20],x,30)),
                         (modify([x=10,y=20]:[x:int,y:int],x,30)):[x:int,y:int],
                        modify([10,20],1,30)).
-  /*
-  test(record)  :- test((λ(z,[y=z])$10),
-                        (λ(z:int,[y=z])$10):[y:int]).
+  test(record)  :- test(λ(z,[y=z])$10,
+                        (λ(z:int,[y=z])$10):[y:int],
+                        λ(z,[z])$10).
   test(record)  :- test(λ(z,z#a),
-                        λ(z:'%x2',(z:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))).
+                        λ(z:'%x2',(z:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1'))),
+                        ['%x1'::u,'%x2'::[a::'%x1']],
+                        λ(z,z#['%x2'])).
   test(record)  :- test(modify((λ(z,[x=1,y=z])$10),x,2),
-                        modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int]).
+                        modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int],
+                        modify(λ(z,[1,z])$10,1,2)).
+                        /*
   test(variant) :- test({[eint=1]},
                        ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0')).
   test(variant) :- test(case({[eint=1]},{[eint=λ(x,x)]}),
@@ -172,8 +177,11 @@ test(_,M:_,R) :- c([],[],M,R),!.
                         case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]}):int).
   test(variant) :- test(case(λ(z,{[eint=z]})$1,{[eint=λ(x,x),b=λ(x,x)]}),
                         case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]}):int).
+                        */
   test(let) :- test(let(x=1);x,
-                   (let(x:int=poly(1:int));x):int).
+                   (let(x:int=poly(1:int));x):int,
+                   let(x=1);x).
+                   /*
   test(let) :- test(let(id=λ(x,x));id,
                    (let(id: ∀('%x0',u,('%x0'->'%x0'))
                           =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!'%x1'))
