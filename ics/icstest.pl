@@ -137,10 +137,6 @@
 
 test(_,M:_,R) :- c([],[],M,R),!.
 test(_,M:_,K,R) :- lk(K,LK),writeln(lk=LK),c(LK,[],M,R1),!,R=R1.
-/*
-ok todo 1 let idx のテストを作る
-todo 2 let idx test
-*/
 :- begin_tests(compile).
   test(int)   :- test(10,   10   :int,10).
   test(true)  :- test(true, true :bool,true).
@@ -207,7 +203,6 @@ todo 2 let idx test
                           = poly(λ(x:'%x0',λ(y:'%x1',x)): ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))));
                           id!int!int$1$2):int,
                     let(id=λ(x,λ(y,x)));id$1$2).
-
   test(let_poly)
     :- reset(5),test(let(id=λ(x,x#a));id,
             (let(id: ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))
