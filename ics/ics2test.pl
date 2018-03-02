@@ -1,6 +1,6 @@
 :- expects_dialect(sicstus).
 :- current_prolog_flag(argv, [V]), use_module(V)
-  ; use_module(ics).
+  ; use_module(ics2).
 
 :- begin_tests(avs).
   test(i) :- i(1).
@@ -69,30 +69,30 @@
 :- begin_tests(k).
   test(k):- k(u).
   test(k):- k([]).
-  test(k):- k([l::int]).
-  test(k):- k({[eint::int,eadd::['1':int,'2':int],emul::['1':int,'2':int]]}),!.
+  test(k):- k([l:int]).
+  test(k):- k({[eint:int,eadd:['1':int,'2':int],emul:['1':int,'2':int]]}),!.
 :- end_tests(k).
 
 :- begin_tests(σ).
   test(σ):- σ(∀(t,u,t)).
-  test(σ):- σ(∀(t,[a::int,b::int],t)).
-  test(σ):- σ(∀(t,{[a::t,b::t]},{[a:t,b:t,c:int]})),!.
-  test(σ):- σ(∀(t,[a::t,b::t],[a:t,b:t,c:int])).
+  test(σ):- σ(∀(t,[a:int,b:int],t)).
+  test(σ):- σ(∀(t,{[a:t,b:t]},{[a:t,b:t,c:int]})),!.
+  test(σ):- σ(∀(t,[a:t,b:t],[a:t,b:t,c:int])).
   test(fun) :- σ(int->int).
 :- end_tests(σ).
 
 :- begin_tests(kinding).
 :- begin_var_names(['^(k|t)[0-9]*$'],['^(true|bool|int)$']).
-  test(kinding_int):- [] ⊢ int::k,k=u,!.
-  test(kinding_t):- [a::[x::int,y::int]] ⊢ a::k,k=[x::int],!.
-  test(kinding_t):- [a::[x::int,y::int]] ⊢ a::k,k=[x::int,y::int],!.
-  % test(kinding_t):- [a::[x::int,y::int]] ⊢ a::k,k=[y::int]. todo
-  test(kinding_record):- [] ⊢ [x:int,y:int]::k,k=[x::int],!.
-  test(kinding_record):- [] ⊢ [x:int,y:int]::k,k=[x::int,y::int],!.
-  test(kinding_variant_t):- [a::{[x::int,y::int]}] ⊢ a::k,k={[x::int]},!.
-  test(kinding_variant_t):- [a::{[x::int,y::int]}] ⊢ a::k,k={[x::int,y::int]},!.
-  test(kinding_variant):- [] ⊢ {[x:int,y:int]}::k,k={[x::int]},!.
-  test(kinding_variant):- [] ⊢ {[x:int,y:int]}::k,k={[x::int,y::int]},!.
+  test(kinding_int):- [] ⊢ int:k,k=u,!.
+  test(kinding_t):- [a:[x:int,y:int]] ⊢ a:k,k=[x:int],!.
+  test(kinding_t):- [a:[x:int,y:int]] ⊢ a:k,k=[x:int,y:int],!.
+  % test(kinding_t):- [a:[x:int,y:int]] ⊢ a:k,k=[y:int]. todo
+  % test(kinding_record):- [] ⊢ [x:int,y:int]:k,k=[x:int],!.
+  test(kinding_record):- [] ⊢ [x:int,y:int]:k,k=[x:int,y:int],!.
+  test(kinding_variant_t):- [a:{[x:int,y:int]}] ⊢ a:k,k={[x:int]},!.
+  test(kinding_variant_t):- [a:{[x:int,y:int]}] ⊢ a:k,k={[x:int,y:int]},!.
+  % test(kinding_variant):- [] ⊢ {[x:int,y:int]}:k,k={[x:int]},!.
+  test(kinding_variant):- [] ⊢ {[x:int,y:int]}:k,k={[x:int,y:int]},!.
 :- end_var_names(_).
 :- end_tests(kinding).
 
@@ -117,14 +117,14 @@
 :- begin_tests(*).
   test(**) :- (1,R)**,!,R=2.
 
-  test(getT) :- getT(∀(t2,[b::int,a::bool],∀(t3,[a::t2],t2->t3)),L,T),!,
-    (L/T)=[t2::[a::bool,b::int],t3::[a::t2]]/(t2->t3).
-  test(*=) :- ∀(t2,[b::int,a::bool],∀(t3,[a::t2],t2->t3)) *= R,
-    R= ∀(t2,[a::bool,b::int],∀(t3,[a::t2],idx(a,t2,idx(b,t2,idx(a,t3,(t2->t3)))))),!.
-  test(*=) :-  ∀('%x2',[a::'%x1'],('%x2'->'%x1')) *=
-               ∀('%x2',[a::'%x1'],idx(a,'%x2',('%x2'->'%x1'))),!.
-  test(*=) :-  ∀('%x1',u,∀('%x2',[a::'%x1'],('%x2'->'%x1'))) *=
-               ∀('%x1',u,∀('%x2',[a::'%x1'],idx(a,'%x2',('%x2'->'%x1')))),!.
+  test(getT) :- getT(∀(t2,[b:int,a:bool],∀(t3,[a:t2],t2->t3)),L,T),!,
+    (L/T)=[t2:[a:bool,b:int],t3:[a:t2]]/(t2->t3).
+  test(*=) :- ∀(t2,[b:int,a:bool],∀(t3,[a:t2],t2->t3)) *= R,
+    R= ∀(t2,[a:bool,b:int],∀(t3,[a:t2],idx(a,t2,idx(b,t2,idx(a,t3,(t2->t3)))))),!.
+  test(*=) :-  ∀('%x2',[a:'%x1'],('%x2'->'%x1')) *=
+               ∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1'))),!.
+  test(*=) :-  ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1'))) *=
+               ∀('%x1',u,∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1')))),!.
   test(*=) :-  ∀('%x2',[a:'%x1'],('%x2'->'%x1')) *=
                ∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1'))),!.
   test(*=) :-  ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1'))) *=
@@ -167,14 +167,14 @@ test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
                         λ(z,[z])$10).
   test(record)  :- test(λ(z,z#a),
                         λ(z:'%x2',(z:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1'))),
-                        ['%x1'::u,'%x2'::[a::'%x1']],
+                        ['%x1':u,'%x2':[a:'%x1']],
                         λ(z,z#['%x2'])).
   test(record)  :- test(modify((λ(z,[x=1,y=z])$10),x,2),
                         modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2):[x:int,y:int],
                         modify(λ(z,[1,z])$10,1,2)).
   test(variant) :- test({[eint=1]},
                        ({[eint=1]}:'%x0'): ∀('%x0',{[eint:int]},'%x0'),
-                       ['%x0'::{[eint::int]}],
+                       ['%x0':{[eint:int]}],
                        {['%x3'=1]}).
   test(variant) :- test(case({[eint=1]},{[eint=λ(x,x)]}),
                         case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]}):int,
@@ -192,7 +192,7 @@ test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
                    (let(id: ∀('%x0',u,('%x0'->'%x0'))
                           =poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));(id!'%x1'))
                    : ∀('%x1',u,('%x1'->'%x1')),
-                   ['%x1'::u],
+                   ['%x1':u],
                    let(id=λ(x,x));id).
   test(let) :- test(let(id=λ(x,x));id$1,
                    (let(id: ∀('%x0',u,('%x0'->'%x0'))
@@ -208,7 +208,7 @@ test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
             (let(id: ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))
                   =poly(λ(x:'%x2',(x:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))));
                   id!'%x3'!'%x4'): ∀('%x3',u,∀('%x4',[a:'%x3'],('%x4'->'%x3'))),
-            ['%x3'::u,'%x4'::[a::'%x3']],
+            ['%x3':u,'%x4':[a:'%x3']],
             let(id=λ('%x6',λ(x,x#['%x6'])));id$'%x5').
   test(let_poly2)
     :- reset(3),

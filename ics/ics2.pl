@@ -1,9 +1,8 @@
 % 4. COMPILATION
 % implementation calculs system
 
-:- op(600,xfx,[::,#]).
+:- op(600,xfx,[#]).
 :- op(650,yfx,[$,!,⊆]).
-:- op(600,xfx,[#,::]).
 :- op(920,xfx,[⟹,⟹*,⟹,⟶,⟶*,⊢,▷]).
 :- op(1200,xfx,[--]).
 :- op(700,xfx,[*=]).
@@ -98,7 +97,7 @@ b ::= int | bool.
 syntax(t). t(T) :- atom(T), \+b(T). 
 
 τ ::= b | t | (τ->τ) | record(l:τ) | variant(l:τ) | idx(l,τ,τ).
-k ::= u | record(l::τ) | variant(l::τ). % same as those of `λlet,#`
+k ::= u | record(l:τ) | variant(l:τ). % same as those of `λlet,#`
 σ ::= τ | ∀(t,k,σ).
 
 % Fig. 6. Kinding rules for the ML-style type inference system λlet,#.
@@ -106,14 +105,14 @@ k ::= u | record(l::τ) | variant(l::τ). % same as those of `λlet,#`
 
 :- begin_var_names(['^[τtxσkli]'],['^(true|bool|int)$']).
 
-K ⊢ t::ks :- t(t),member(t::ks1,K),append(ks,_,ks1), ks \= [].
-_ ⊢ ts::ks :- maplist([l:t,l::t]>>!,ts,ks).
-_ ⊢ ts::ks :- maplist([l:t,k::t]>>!,ts,ks1), append(ks,_,ks1), ks \= [].
-_ ⊢ ts::[li::ti] :- member(li:ti,ts).
-K ⊢ t::{ks} :- t(t),member(t::{ks1},K),append(ks,_,ks1), ks \= [].
-_ ⊢ {ts}::{ks} :-  maplist([l:t,k::t]>>!,ts,ks1),append(ks,_,ks1), ks \= [].
-_ ⊢ {ts}::{[li::ti]} :- member(li:ti,ts).
-_ ⊢ τ::u :- τ(τ).
+K ⊢ t:ks :- t(t),member(t:ks1,K),append(ks,_,ks1), ks \= [].
+_ ⊢ ts:ks :- maplist([l:t,l:t]>>!,ts,ks).
+%_ ⊢ ts:[li:ti] :- member(li:ti,ts).
+K ⊢ t:{ks} :- t(t),member(t:{ks1},K),append(ks,_,ks1), ks \= [].
+_ ⊢ {ts}:{ks} :-  maplist([l:t,k:t]>>!,ts,ks).
+%_ ⊢ {ts}:{[li:ti]} :- member(li:ti,ts).
+
+_ ⊢ τ:u :- τ(τ).
 
 % Fig. 13. Typing rules for the implementation calculus λlet,[].
 
@@ -133,11 +132,11 @@ _ ⊢ i : idx(li,{Variant}) :- i(i),nth1(i,Variant,li:_). % ICONST2
 
 % 4.3 Compilation Algorithm
 
-idxSet(t::u,[]).
-idxSet(t::F,Is) :- maplist([L::_,idx(L,t)]>>!,F,Is).
-idxSet(t::{F},Is) :- maplist([L::_,idx(L,t)]>>!,F,Is).
-idxSet(∀(t,k,τ),Is) :- idSet(t::k,Is1),idxSet(τ,Is2),union(Is1,Is2,Is).
-idxSet(K,Is) :- foldl([t::k,Is1,Is3]>>(idxSet(t::k,Is2),union(Is1,Is2,Is3)),K,[],Is).
+idxSet(t:u,[]).
+idxSet(t:F,Is) :- maplist([L:_,idx(L,t)]>>!,F,Is).
+idxSet(t:{F},Is) :- maplist([L:_,idx(L,t)]>>!,F,Is).
+idxSet(∀(t,k,τ),Is) :- idSet(t:k,Is1),idxSet(τ,Is2),union(Is1,Is2,Is).
+idxSet(K,Is) :- foldl([t:k,Is1,Is3]>>(idxSet(t:k,Is2),union(Is1,Is2,Is3)),K,[],Is).
 
 xts(Ts,x,x!Ts) :- x(x),!.
 xts(Ts,M!T,M_) :- xts([T|Ts],M,M_),!.
@@ -145,21 +144,20 @@ mks(σ,[],[],σ).
 mks(∀(t,_,σ),[τ|τs],[τ/t|S],σ_) :- mks(σ,τs,S,σ_).
 cdot(L,S,xi,idx(l,t,t2),xi_) :-
   tsub(S,t,Sti),
-  [] ⊢ Sti::ks,!,idxSet(Sti::ks,Idxs),(nth1(Ï,Idxs,idx(l,Sti)); member(Ï:idx(l,Sti),L)),
+  [] ⊢ Sti:ks,!,idxSet(Sti:ks,Idxs),(nth1(Ï,Idxs,idx(l,Sti)); member(Ï:idx(l,Sti),L)),
   cdot(L,S,xi$Ï,t2,xi_).
 cdot(_,_,xi,_,xi).
 
-getT(∀(ti,u,t),[ti::u|L],T) :- !,getT(t,L,T).
-getT(∀(ti,ki,t),[ti::ki_|L],T) :- !,sort(ki,ki_),getT(t,L,T).
+getT(∀(ti,u,t),[ti:u|L],T) :- !,getT(t,L,T).
+getT(∀(ti,ki,t),[ti:ki_|L],T) :- !,sort(ki,ki_),getT(t,L,T).
 getT(T,[],T).
 
 % この定義は、次のように型の割り当てに拡張されます: (T)* = {x : (T(x))* |x ∈ dom(T)}
 T *= R :- maplist([x:t,x:t_]>> t *= t_,T,R).
-Q *= R :- getT(Q,L,T),L\=[],T*=T1,foldr(bbb1,L,T1,T2),foldr([t::K,T3,∀(t,K,T3)]>>!,L,T2,R).
+Q *= R :- getT(Q,L,T),L\=[],T*=T1,foldr(bbb1,L,T1,T2),foldr([t:K,T3,∀(t,K,T3)]>>!,L,T2,R).
 T *= T.
-bbb1(t::u,T,T) :- !.
-bbb1(t::K,T,R) :- foldr([li::ti,T1,idx(li,t,T1)]>>!,K,T,R).
-bbb1(t::K,T,R) :- foldr([li:ti,T1,idx(li,t,T1)]>>!,K,T,R). % todo
+bbb1(t:u,T,T) :- !.
+bbb1(t:K,T,R) :- foldr([li:ti,T1,idx(li,t,T1)]>>!,K,T,R).
 
 getL(L,idx(li,ti,t),[Ii:idx(li,ti)|L_],[Ii|Is]) :- fresh(Ii),getL(L,t,L_,Is). 
 getL(L,_,L,[]).
@@ -172,10 +170,10 @@ c(_,_,CB,CB) :- cb(CB).
 c(L,T,λ(x:τ,M), λ(x,M_)):- c(L,[x:τ|T],M,M_).
 c(L,T,(M1$M2), (M1_$M2_)) :- c(L,T,M1,M1_), c(L,T,M2,M2_).
 c(L,T,LMs,Cs):- maplist([_=Mi,Ci]>>c(L,T,Mi,Ci),LMs,Cs).
-c(L,T,(M:τ)#l,C#[Ï]) :- c(L,T,M,C),[] ⊢ τ::ks,!,idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
+c(L,T,(M:τ)#l,C#[Ï]) :- c(L,T,M,C),[] ⊢ τ:ks,!,idxSet(τ:ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
 c(L,T,modify(M1:τ,l,M2),modify(C1,Ï,C2)) :- c(L,T,M1,C1), c(L,T,M2,C2),
-                                    [] ⊢ τ::ks,!,idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
-c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), [] ⊢ τ::ks,idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).       c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,T,Mi,Ci), lMs,Cs).
+                                    [] ⊢ τ:ks,!,idxSet(τ:ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
+c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), [] ⊢ τ:ks,idxSet(τ:ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).       c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,T,Mi,Ci), lMs,Cs).
 c(L,T,poly(M1:t), C1_) :- t *= t_, getT(t_,_,Idxs),getL(L,Idxs,L_,Is),!,c(L_,T,M1,C1),addλ(Is,C1,C1_).
 c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1), σ *= σ_, c(L,[x:σ_|T],M2,C2).
 
