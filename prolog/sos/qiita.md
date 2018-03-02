@@ -13,9 +13,8 @@ rtgモジュールは構文定義をBNF風の記述を可能にするライブ�
 
 ```prolog:sos.pl
 % Second-Order System Λ∀,#
-:- op(600,xfx,[::,#]).
+:- op(600,xfx,[#]).
 :- op(650,yfx,[$,!]).
-:- op(600,xfx,[#,::]).
 :- op(920,xfx,[⟹,▷,⊢,⟹*]).
 :- op(1200,xfx,[--]).
 :- use_module(rtg).
@@ -382,4 +381,4 @@ Prologを用いればこのように多相レコード計算のような難し�
 
 [^1]: A Polymorphic Record Calculus and Its Compilation http://www.pllab.riec.tohoku.ac.jp/~ohori/research/toplas95.pdf
 
-[^2]: ソースコードのリポジトリ https://github.com/hsk/ohori95/master/sos/
+[^2]: ソースコードのリポジトリ https://github.com/hsk/ohori95/master/prolog/sos/
