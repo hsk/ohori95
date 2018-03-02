@@ -121,7 +121,14 @@
     (L/T)=[t2::[a::bool,b::int],t3::[a::t2]]/(t2->t3).
   test(*=) :- ∀(t2,[b::int,a::bool],∀(t3,[a::t2],t2->t3)) *= R,
     R= ∀(t2,[a::bool,b::int],∀(t3,[a::t2],idx(a,t2,idx(b,t2,idx(a,t3,(t2->t3)))))),!.
-
+  test(*=) :-  ∀('%x2',[a::'%x1'],('%x2'->'%x1')) *=
+               ∀('%x2',[a::'%x1'],idx(a,'%x2',('%x2'->'%x1'))),!.
+  test(*=) :-  ∀('%x1',u,∀('%x2',[a::'%x1'],('%x2'->'%x1'))) *=
+               ∀('%x1',u,∀('%x2',[a::'%x1'],idx(a,'%x2',('%x2'->'%x1'))))!.
+  test(*=) :-  ∀('%x2',[a:'%x1'],('%x2'->'%x1')) *=
+               ∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1'))).
+  test(*=) :-  ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1'))) *=
+               ∀('%x1',u,∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1')))).
   test(getL1):- reset,getL([],idx(b,bt,c),['%x0':idx(b,bt)],['%x0']),!.
   test(getL2):- reset,getL([],idx(a,at,idx(b,bt,c)),['%x0':idx(a,at),'%x1':idx(b,bt)],['%x0','%x1']),!.
   test(addλ) :- addλ([a,b,c,d],t,T_),T_=λ(a,λ(b,λ(c,λ(d,t)))).
@@ -131,7 +138,8 @@
 test(_,M:_,R) :- c([],[],M,R),!.
 test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
 /*
-1 let idx
+ok todo 1 let idx のテストを作る
+todo 2 let idx test
 */
 :- begin_tests(compile).
   test(int)   :- test(10,   10   :int,10).
@@ -143,8 +151,6 @@ test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
   test(app)   :- test((λ(x,x)$1),
                       (λ(x:int,x)$1): int,
                       λ(x,x)$1).
-  %test(app)  :- test(λ(t::u,λ(x:t,x)) , ∀(t,u,(t->t)).
-  %test(tapp) :- test((λ(t::u,λ(x:t,x)) ! int), int->int).
   test(record) :- test([x=10,y=20],
                        [x=10,y=20]:[x:int,y:int],
                        [10,20]).
@@ -201,6 +207,15 @@ test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
                           = poly(λ(x:'%x0',λ(y:'%x1',x)): ∀('%x1',u,∀('%x0',u,('%x0'->'%x1'->'%x0')))));
                           id!int!int$1$2):int,
                     let(id=λ(x,λ(y,x)));id$1$2).
+
+  test(let_poly)
+    :- test(let(id=λ(x,x#a));id,
+            (let(id: ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))
+                  =poly(λ(x:'%x2',(x:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))));
+                  id!'%x3'!'%x4'): ∀('%x3',u,∀('%x4',[a:'%x3'],('%x4'->'%x3'))),
+            ['%x3'::u,'%x4'::[a::'%x3']],
+            R),writeln(R).
+                    
 :- end_tests(compile).
 
 :- run_tests.

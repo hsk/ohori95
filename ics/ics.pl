@@ -150,14 +150,16 @@ idxSet(K,Is) :- foldl([t::k,Is1,Is3]>>(idxSet(t::k,Is2),union(Is1,Is2,Is3)),K,[]
   ∀(t2,[a::bool,b::int],∀(t3,[a::t2],idx(a,t2,idx(b,t2,idx(a,t3,t2->t3))))) */
 
 getT(∀(ti,u,t),[ti::u|L],T) :- !,getT(t,L,T).
-getT(∀(ti,ki,t),[ti::ki_|L],T) :- sort(ki,ki_),getT(t,L,T).
+getT(∀(ti,ki,t),[ti::ki_|L],T) :- !,sort(ki,ki_),getT(t,L,T).
 getT(T,[],T).
 
 % この定義は、次のように型の割り当てに拡張されます: (T)* = {x : (T(x))* |x ∈ dom(T)}
 T *= R :- maplist([x:t,x:t_]>> t *= t_,T,R).
-Q *= R :- getT(Q,L,T),L\=[],T*=T1,foldr(bbb1,L,T1,T2),foldr([t::K,T3,∀(t,K,T3)]>>!,L,T2,R).
+Q *= R :- getT(Q,L,T),L\=[],T*=T1,writeln(T*=T1),foldr(bbb1,L,T1,T2),foldr([t::K,T3,∀(t,K,T3)]>>!,L,T2,R).
 T *= T.
+bbb1(t::u,T,T) :- !.
 bbb1(t::K,T,R) :- foldr([li::ti,T1,idx(li,t,T1)]>>!,K,T,R).
+bbb1(t::K,T,R) :- foldr([li:ti,T1,idx(li,t,T1)]>>!,K,T,R). % todo
 
 /*
   kind 割り当て `K` に対して、 `K` によって決定されるインデックス割り当て `LK` を 
@@ -171,8 +173,6 @@ bbb1(t::K,T,R) :- foldr([li::ti,T1,idx(li,t,T1)]>>!,K,T,R).
 lk(K,LK) :- idxSet(K,Is), maplist([idx(l,t),L:idx(l,t)]>>fresh(L),Is,LK).
 
 
-getL(L,idx(li,ti,t),[Ii:idx(li,ti)|L_],[Ii|Is]) :- fresh(Ii),getL(L,t,L_,Is). 
-getL(L,_,L,[]).
 addλ([],t,t).
 addλ([Ii|Is],t,λ(Ii,t_)) :- addλ(Is,t,t_).
 
@@ -184,7 +184,7 @@ c(L,T,LMs,Cs):- maplist([_=Mi,Ci]>>c(L,T,Mi,Ci),LMs,Cs).
 c(L,T,(M:τ)#l,C#[Ï]) :- writeln(a),
   c(L,T,M,C),writeln(b),
    [] ⊢ τ::ks,!,
-   writeln(c), idxSet(τ::ks,Idxs),writeln(d:τ/ks/Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
+   writeln(c), idxSet(τ::ks,Idxs),writeln(d:idx(l,τ)/ks/Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)),writeln(ok).
 c(L,T,modify(M1:τ,l,M2),modify(C1,Ï,C2)) :- c(L,T,M1,C1), c(L,T,M2,C2),
                                     [] ⊢ τ::ks,!, idxSet(τ::ks,Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
 c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), [] ⊢ τ::ks,idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).                  
@@ -197,8 +197,17 @@ c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,
              = (∀t1::k1···∀tn::kn.τ1)∗
           C1 = C(L{I1:idx(l1,t1'),···,In:idx(lm,tm')},T,M1) (I1,···,Im fresh)
       in λI1···λIm.C1
+
+getT(∀(ti,u,t),[ti::u|L],T) :- !,getT(t,L,T).
+getT(∀(ti,ki,t),[ti::ki_|L],T) :- sort(ki,ki_),getT(t,L,T).
+getT(T,[],T).
 */
-c(L,T,poly(M1:t), C1_) :- writeln(poly:t),t *= t_, writeln(poly2:t_),getT(t_,_,Idxs),getL(L,Idxs,L_,Is),c(L_,T,M1,C1),addλ(Is,C1,C1_).
+getL(L,idx(li,ti,t),[Ii:idx(li,ti)|L_],[Ii|Is]) :- fresh(Ii),getL(L,t,L_,Is). 
+getL(L,_,L,[]).
+
+c(L,T,poly(M1:t), C1_) :- writeln(poly:t),t *= t_, writeln(poly2:t_),getT(t_,_,Idxs),getL(L,Idxs,L_,Is),!,
+  writeln(poly/"Idxs":Idxs/"Is":Is/c(L_,T,M1)),
+  c(L_,T,M1,C1),addλ(Is,C1,C1_).
 c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1),writeln(T/let(x:σ=M1)/M2), σ *= σ_, c(L,[x:σ_|T],M2,C2).
 /*
 C(L,T,(x τ1···τn)) =

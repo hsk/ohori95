@@ -21,7 +21,7 @@ list(A) ::= [] | [A | list(A)].
 record(A) ::= list(A).
 variant(A) ::= {list(A)}.
 q ::= b | t | (q->q) | record(l:q) | variant(l:q) | ∀(t,k,q).
-k ::= u | record(l::q) | variant(l::q).
+k ::= u | record(l::q) | variant(l::q) | record(l:q) | variant(l:q).
 
 syntax(integer).
 syntax(x). x(X) :- atom(X), \+cb(X).
@@ -86,6 +86,8 @@ tsub(S,∀(T,K,Q),∀(T,K_,Q_)) :- subtract(S,[_/T],S_),ksub(S_,K,K_),tsub(S_,Q,
 ksub(_,u,u).
 ksub(S,LQs,LQs_) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 ksub(S,{LQs},{LQs_}) :- maplist({S}/[L::Q,L::Q_]>>tsub(S,Q,Q_), LQs,LQs_).
+ksub(S,LQs,LQs_) :- maplist({S}/[L:Q,L:Q_]>>tsub(S,Q,Q_), LQs,LQs_). % todo ::
+ksub(S,{LQs},{LQs_}) :- maplist({S}/[L:Q,L:Q_]>>tsub(S,Q,Q_), LQs,LQs_).
 
 msub(S,X,N_) :- x(X),member(N/X,S),msub(S,N,N_).
 msub(_,X,X) :- x(X).
@@ -96,7 +98,7 @@ msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
 msub(S,(M!Q),(M_!Q)) :- msub(S,M,M_).
 msub(S,λ(T::K,M),λ(T::K,M_)) :- msub(S,M,M_).
 msub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>msub(S,M,M_),LMs,LMs_).
-msub(S,(M#L),(M_#L)) :- msub(S,M,M_).
+msub(S,((M:T)#L),((M_:T)#L)) :- msub(S,M,M_).
 msub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
 msub(S,{[L=M]}:Q,{[L=M_]}:Q) :- msub(S,M,M_).
 msub(S,case(M,{LMs}),case(M_,{LMs_})) :- msub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
@@ -107,7 +109,7 @@ mtsub(S,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub(S,Q,Q_),mtsub(S,M,M_).
 mtsub(S,(M1$M2),(M1_$M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
 mtsub(S,(M!Q),(M_!Q_)) :- mtsub(S,M,M_), tsub(S,Q,Q_).
 mtsub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>mtsub(S,M,M_),LMs,LMs_).
-mtsub(S,(M#L),(M_#L)) :- mtsub(S,M,M_).
+mtsub(S,((M:T)#L),((M_:T_)#L)) :- tsub(S,T,T_),mtsub(S,M,M_).
 mtsub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
 mtsub(S,{[L=M]}:Q,{[L=M_]}:Q_) :- mtsub(S,M,M_),tsub(S,Q,Q_).
 mtsub(S,case(M,{LMs}),case(M_,{LMs_})) :- mtsub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>mtsub(S,Mi,Mi_),LMs,LMs_).
@@ -300,9 +302,9 @@ wk(K,T,case(E0,{Les}), (Kn1,S_, case(M0_,{LMs_}),t0_)) :-
 wk(K,T,{[L=E1]},([t::{[L:τ1]}|K1],S1,({[L=M1]}:t),t)) :-
   wk(K,T,E1,(K1,S1,M1,τ1)),fresh(t).
 wk(K,T,(let(X=E1);E2),(K2,S21,(let(X:σ1_=poly(M1_:σ1_)); M2),τ2)) :-
-  wk(K,T,E1,(K1,S1,M1,τ1)),subT(S1,T,T1),
+  wk(K,T,E1,(K1,S1,M1,τ1)),!,subT(S1,T,T1),
   cls(K1,T1,τ1,(K1_,σ1)),
-  wk(K1_,[X:σ1|T1],E2,(K2,S2,M2,τ2)),
+  wk(K1_,[X:σ1|T1],E2,(K2,S2,M2,τ2)),!,
   tsub(S2,σ1,σ1_),msub(S2,M1,M1_),
   union(S2,S1,S21).
 
