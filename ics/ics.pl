@@ -158,7 +158,7 @@ getL(L,_,L,[]).
 
 % この定義は、次のように型の割り当てに拡張されます: (T)* = {x : (T(x))* |x ∈ dom(T)}
 T *= R :- maplist([x:t,x:t_]>> t *= t_,T,R).
-Q *= R :- getT(Q,L,T),L\=[],T*=T1,writeln(T*=T1),foldr(bbb1,L,T1,T2),foldr([t::K,T3,∀(t,K,T3)]>>!,L,T2,R).
+Q *= R :- getT(Q,L,T),L\=[],T*=T1,foldr(bbb1,L,T1,T2),foldr([t::K,T3,∀(t,K,T3)]>>!,L,T2,R).
 T *= T.
 bbb1(t::u,T,T) :- !.
 bbb1(t::K,T,R) :- foldr([li::ti,T1,idx(li,t,T1)]>>!,K,T,R).
@@ -184,12 +184,9 @@ c(_,_,CB,CB) :- cb(CB).
 c(L,T,λ(x:τ,M), λ(x,M_)):- c(L,[x:τ|T],M,M_).
 c(L,T,(M1$M2), (M1_$M2_)) :- c(L,T,M1,M1_), c(L,T,M2,M2_).
 c(L,T,LMs,Cs):- maplist([_=Mi,Ci]>>c(L,T,Mi,Ci),LMs,Cs).
-c(L,T,(M:τ)#l,C#[Ï]) :- writeln(a),
-  c(L,T,M,C),writeln(b),
-   [] ⊢ τ::ks,!,
-   writeln(c), idxSet(τ::ks,Idxs),writeln(d:idx(l,τ)/ks/Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)),writeln(ok).
+c(L,T,(M:τ)#l,C#[Ï]) :- c(L,T,M,C),[] ⊢ τ::ks,!,idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
 c(L,T,modify(M1:τ,l,M2),modify(C1,Ï,C2)) :- c(L,T,M1,C1), c(L,T,M2,C2),
-                                    [] ⊢ τ::ks,!, idxSet(τ::ks,Idxs), (nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
+                                    [] ⊢ τ::ks,!, idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).
 c(L,T,({[l=M]}:τ),{[Ï=C]}) :- c(L,T,M,C), [] ⊢ τ::ks,idxSet(τ::ks,Idxs),(nth1(Ï,Idxs,idx(l,τ));member(Ï:idx(l,τ),L)).                  
 c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,T,Mi,Ci), lMs,Cs).
 
@@ -202,10 +199,8 @@ c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,
       in λI1···λIm.C1
 */
 
-c(L,T,poly(M1:t), C1_) :- writeln(poly:t),t *= t_, writeln(poly2:t_),getT(t_,_,Idxs),getL(L,Idxs,L_,Is),!,
-  writeln(poly/"Idxs":Idxs/"Is":Is/c(L_,T,M1)),
-  c(L_,T,M1,C1),addλ(Is,C1,C1_).
-c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1),writeln(T/let(x:σ=M1)/M2), σ *= σ_, c(L,[x:σ_|T],M2,C2).
+c(L,T,poly(M1:t), C1_) :- t *= t_, getT(t_,_,Idxs),getL(L,Idxs,L_,Is),!,c(L_,T,M1,C1),addλ(Is,C1,C1_).
+c(L,T,(let(x:σ=M1);M2),(let(x=C1);C2)) :- c(L,T,M1,C1), σ *= σ_, c(L,[x:σ_|T],M2,C2).
 /*
 C(L,T,(x τ1···τn)) =
   let (∀t1::k1 ···tn::kn.idx(l1,t1') ⇒···idx(lm,tm') ⇒ τ) = T(x) 関数を取り出して
@@ -217,15 +212,12 @@ C(L,T,(x τ1···τn)) =
                       R= ∀(t2,[a::bool,b::int],∀(t3,[a::t2],idx(a,t2,idx(b,t2,idx(a,t3,(t2->t3)))))),!.
 
 */
-c(L,T,(x1!τ1), x_) :- writeln(x1!τ1),xts([],x1!τ1,x!τs),writeln(T/x!τs),
-                          member(x: σ, T),mks(σ,τs,S,σ_),
-                        writeln("koko":σ/S/σ_),
-                        cdot(L,S,x,σ_,x_),writeln("id":x_).
+c(L,T,(x1!τ1), x_) :- xts([],x1!τ1,x!τs),member(x: σ, T),mks(σ,τs,S,σ_), cdot(L,S,x,σ_,x_).
 
-cdot(L,S,xi,idx(l,t,t2),xi_) :- writeln(kore1),tsub(S,t,Sti),writeln(sti/Sti),
-  [] ⊢ Sti::ks,!, (idxSet(Sti::ks,Idxs),writeln(idxs/Idxs),nth1(Ï,Idxs,idx(l,Sti))
-  ; writeln("l"/L), member(Ï:idx(l,Sti),L)),cdot(L,S,xi!Ï,t2,xi_).
-cdot(L,S,xi,_,xi) :- !.
+cdot(L,S,xi,idx(l,t,t2),xi_) :- tsub(S,t,Sti),
+  [] ⊢ Sti::ks,!, (idxSet(Sti::ks,Idxs),nth1(Ï,Idxs,idx(l,Sti))
+  ; member(Ï:idx(l,Sti),L)),cdot(L,S,xi!Ï,t2,xi_).
+cdot(_,_,xi,_,xi).
 xts(Ts,x,x!Ts) :- x(x),!.
 xts(Ts,M!T,M_) :- xts([T|Ts],M,M_),!.
 mks(σ,[],[],σ).

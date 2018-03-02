@@ -124,11 +124,11 @@
   test(*=) :-  ∀('%x2',[a::'%x1'],('%x2'->'%x1')) *=
                ∀('%x2',[a::'%x1'],idx(a,'%x2',('%x2'->'%x1'))),!.
   test(*=) :-  ∀('%x1',u,∀('%x2',[a::'%x1'],('%x2'->'%x1'))) *=
-               ∀('%x1',u,∀('%x2',[a::'%x1'],idx(a,'%x2',('%x2'->'%x1'))))!.
+               ∀('%x1',u,∀('%x2',[a::'%x1'],idx(a,'%x2',('%x2'->'%x1')))),!.
   test(*=) :-  ∀('%x2',[a:'%x1'],('%x2'->'%x1')) *=
-               ∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1'))).
+               ∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1'))),!.
   test(*=) :-  ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1'))) *=
-               ∀('%x1',u,∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1')))).
+               ∀('%x1',u,∀('%x2',[a:'%x1'],idx(a,'%x2',('%x2'->'%x1')))),!.
   test(getL1):- reset,getL([],idx(b,bt,c),['%x0':idx(b,bt)],['%x0']),!.
   test(getL2):- reset,getL([],idx(a,at,idx(b,bt,c)),['%x0':idx(a,at),'%x1':idx(b,bt)],['%x0','%x1']),!.
   test(addλ) :- addλ([a,b,c,d],t,T_),T_=λ(a,λ(b,λ(c,λ(d,t)))).
@@ -136,7 +136,7 @@
 :- end_tests(*).
 
 test(_,M:_,R) :- c([],[],M,R),!.
-test(_,M:_,K,R) :- lk(K,LK),writeln(lk=LK),c(LK,[],M,R1),!,R=R1.
+test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
 :- begin_tests(compile).
   test(int)   :- test(10,   10   :int,10).
   test(true)  :- test(true, true :bool,true).
