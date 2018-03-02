@@ -14,6 +14,7 @@ term_expansion(A--B,B:-A).
 foldr(_,[],S,S) :- !. % 畳み込み
 foldr(F,[X|Xs],S,S_) :- foldr(F,Xs,S,S1),!,call(F,X,S1,S_),!.
 reset :- bb_put(i,0).
+reset(I) :- bb_put(i,I).
 fresh(T) :- bb_get(i,I), format(atom(T),'%x~w',[I]), I1 is I + 1, bb_put(i,I1).
 
 list(A) ::= [] | [A | list(A)].
@@ -152,6 +153,8 @@ idxSet(K,Is) :- foldl([t::k,Is1,Is3]>>(idxSet(t::k,Is2),union(Is1,Is2,Is3)),K,[]
 getT(∀(ti,u,t),[ti::u|L],T) :- !,getT(t,L,T).
 getT(∀(ti,ki,t),[ti::ki_|L],T) :- !,sort(ki,ki_),getT(t,L,T).
 getT(T,[],T).
+getL(L,idx(li,ti,t),[Ii:idx(li,ti)|L_],[Ii|Is]) :- fresh(Ii),getL(L,t,L_,Is). 
+getL(L,_,L,[]).
 
 % この定義は、次のように型の割り当てに拡張されます: (T)* = {x : (T(x))* |x ∈ dom(T)}
 T *= R :- maplist([x:t,x:t_]>> t *= t_,T,R).
@@ -197,13 +200,7 @@ c(L,T,case(M,{lMs}), switch(C,Cs)) :- c(L,T,M,C), maplist({L,T}/[li=Mi,Ci]>>c(L,
              = (∀t1::k1···∀tn::kn.τ1)∗
           C1 = C(L{I1:idx(l1,t1'),···,In:idx(lm,tm')},T,M1) (I1,···,Im fresh)
       in λI1···λIm.C1
-
-getT(∀(ti,u,t),[ti::u|L],T) :- !,getT(t,L,T).
-getT(∀(ti,ki,t),[ti::ki_|L],T) :- sort(ki,ki_),getT(t,L,T).
-getT(T,[],T).
 */
-getL(L,idx(li,ti,t),[Ii:idx(li,ti)|L_],[Ii|Is]) :- fresh(Ii),getL(L,t,L_,Is). 
-getL(L,_,L,[]).
 
 c(L,T,poly(M1:t), C1_) :- writeln(poly:t),t *= t_, writeln(poly2:t_),getT(t_,_,Idxs),getL(L,Idxs,L_,Is),!,
   writeln(poly/"Idxs":Idxs/"Is":Is/c(L_,T,M1)),
@@ -220,14 +217,15 @@ C(L,T,(x τ1···τn)) =
                       R= ∀(t2,[a::bool,b::int],∀(t3,[a::t2],idx(a,t2,idx(b,t2,idx(a,t3,(t2->t3)))))),!.
 
 */
-c(L,T,(x1!τ1), x) :- writeln(x1!τ1),xts([],x1!τ1,x!τs),writeln(T/x!τs),
+c(L,T,(x1!τ1), x_) :- writeln(x1!τ1),xts([],x1!τ1,x!τs),writeln(T/x!τs),
                           member(x: σ, T),mks(σ,τs,S,σ_),
-                        writeln("koko":σ/S/σ_).
-                        %foldr(cdot(L,S),τs,x,x_) todo.
+                        writeln("koko":σ/S/σ_),
+                        cdot(L,S,x,σ_,x_),writeln("id":x_).
 
-cdot(L,S,τi,xi,xi!Ï) :- tsub(S,τi,Sti),writeln(sti/Sti),
+cdot(L,S,xi,idx(l,t,t2),xi_) :- writeln(kore1),tsub(S,t,Sti),writeln(sti/Sti),
   [] ⊢ Sti::ks,!, (idxSet(Sti::ks,Idxs),writeln(idxs/Idxs),nth1(Ï,Idxs,idx(l,Sti))
-  ; writeln("l"/L), member(Ï:idx(l,Sti),L)).
+  ; writeln("l"/L), member(Ï:idx(l,Sti),L)),cdot(L,S,xi!Ï,t2,xi_).
+cdot(L,S,xi,_,xi) :- !.
 xts(Ts,x,x!Ts) :- x(x),!.
 xts(Ts,M!T,M_) :- xts([T|Ts],M,M_),!.
 mks(σ,[],[],σ).

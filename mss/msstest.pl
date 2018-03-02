@@ -176,6 +176,11 @@ test(A,(M_:T_),K_) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M
                   =poly(λ(x:'%x2',(x:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))));
                   id!'%x3'!'%x4'): ∀('%x3',u,∀('%x4',[a:'%x3'],('%x4'->'%x3'))),
             ['%x3'::u,'%x4'::[a:'%x3']]).
+  test(let_poly2)
+    :- test(let(id=λ(x,x#a));id$[a=10,b=20],
+           (let(id: ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))
+                  =poly(λ(x:'%x2',(x:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))));
+                  id!int![a:int,b:int]$[a=10,b=20]):int).
 :- end_tests(typing).
 
 :- run_tests.

@@ -136,7 +136,7 @@
 :- end_tests(*).
 
 test(_,M:_,R) :- c([],[],M,R),!.
-test(_,M:_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
+test(_,M:_,K,R) :- lk(K,LK),writeln(lk=LK),c(LK,[],M,R1),!,R=R1.
 /*
 ok todo 1 let idx のテストを作る
 todo 2 let idx test
@@ -209,13 +209,19 @@ todo 2 let idx test
                     let(id=λ(x,λ(y,x)));id$1$2).
 
   test(let_poly)
-    :- test(let(id=λ(x,x#a));id,
+    :- reset(5),test(let(id=λ(x,x#a));id,
             (let(id: ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))
                   =poly(λ(x:'%x2',(x:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))));
                   id!'%x3'!'%x4'): ∀('%x3',u,∀('%x4',[a:'%x3'],('%x4'->'%x3'))),
             ['%x3'::u,'%x4'::[a::'%x3']],
-            R),writeln(R).
-                    
+            let(id=λ('%x6',λ(x,x#['%x6'])));id!'%x5').
+  test(let_poly2)
+    :- reset(3),
+       test(let(id=λ(x,x#a));id$[a=10,b=20],
+           (let(id: ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))
+                  =poly(λ(x:'%x2',(x:'%x2')#a): ∀('%x1',u,∀('%x2',[a:'%x1'],('%x2'->'%x1')))));
+                  id!int![a:int,b:int]$[a=10,b=20]):int,
+           let(id=λ('%x3',λ(x,x#['%x3'])));id!1$[10,20]).
 :- end_tests(compile).
 
 :- run_tests.
