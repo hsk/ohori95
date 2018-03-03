@@ -95,7 +95,7 @@ ftv(x,[x]) :- x(x).
 ftv(B,[]) :- b(B).
 ftv((σ1->σ2),FTV) :- ftv(σ1,FTV1),ftv(σ2,FTV2),union(FTV1,FTV2,FTV).
 ftv(lMs,FTVs) :- foldl([_=M,FTV,FTV_]>>(ftv(M,FTVi),union(FTV,FTVi,FTV_)),lMs,[],FTVs).
-ftv({lMs},{FTVs}) :- foldl([_=M,FTV,FTV_]>>(ftv(M,FTVi),union(FTV,FTVi,FTV_)),lMs,[],FTVs).
+ftv({lMs},FTVs) :- foldl([_=M,FTV,FTV_]>>(ftv(M,FTVi),union(FTV,FTVi,FTV_)),lMs,[],FTVs).
 ftv(∀(t,k,σ),FTV) :- kftv(k,KFTV),ftv(σ,QFTV),union(KFTV,QFTV,FTV1),subtract(FTV1,t,FTV).
 
 kftv(u,[]).
