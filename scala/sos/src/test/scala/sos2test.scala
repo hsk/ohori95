@@ -104,4 +104,21 @@ class sos2test extends FunSpec {
     test("variant2", ti(Map(),Map(),MCase(MApp(Mλ("z",tint,MVariant("eint",Mx("z"),tvariant(List("eint"->tint)))),MInt(1)),List("eint"->Mλ("x",tint,Mx("x")))))==tint)
     test("variant3", ti(Map(),Map(),MCase(MApp(Mλ("z",tint,MVariant("eint",Mx("z"),tvariant(List("eint"->tint,"b"->tint)))),MInt(1)),List("eint"->Mλ("x",tint,Mx("x")),"b"->Mλ("x",tint,Mx("x")))))==tint)
   }
+
+  // Free Type variables
+  def ftv(σ:σ):Set[x] = σ match {
+    case tx(x) => Set(x)
+    case _ if b(σ) => Set()
+    case tarr(σ1,σ2) => ftv(σ1)++ftv(σ2)
+    case trecord(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
+    case tvariant(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
+    case ∀(t,k,σ) => kftv(k)++ftv(σ) - t
+  }
+  def kftv(k:k):Set[x] = k match {
+    case U => Set()
+    case krecord(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
+    case kvariant(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
+  }
+  def tftv(T:Map[x,σ]):Set[x] =
+    T.foldLeft(Set[x]()){case(tv,(_,σ))=>tv++ftv(σ)}
 }

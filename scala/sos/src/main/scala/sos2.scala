@@ -1,6 +1,6 @@
 // Second-Order System Λ∀,#
-// Syntaxs
 object sos2 {
+  // Syntaxs
   type l = String
   type x = String
   trait k
@@ -19,6 +19,7 @@ object sos2 {
   def b(t:σ) = t == tbool || t == tint
   def q(a:Any) = a match {case _:σ => true case _ => false}
   def k(a:Any) = a match {case _:k => true case _ => false}
+
   trait M
   case object MTrue extends M
   case object MFalse extends M
@@ -34,9 +35,9 @@ object sos2 {
   case class MVariant(l:l,M:M,σ:σ) extends M
   case class MCase(M:M,w:List[(l,M)]) extends M
   
-  def i(m:M) = m match {case MInt(_) => true case _ => false}
-  def cb(m:M) = m match {case MTrue => true case MFalse => true case _ => i(m)}
-  def x(m:M) = m match {case Mx(_)=>true case _=>false}
+  def i(m:M)   = m match {case MInt(_) => true case _ => false}
+  def cb(m:M)  = m match {case MTrue => true case MFalse => true case _ => i(m)}
+  def x(m:M)   = m match {case Mx(_)=>true case _=>false}
   def m(m:Any) = m match {case _:M=>true case _=>false}
 
   // Substitutions
@@ -93,49 +94,30 @@ object sos2 {
     case MModify(m,l,n) => MModify(eval1(m),l,n)
     case MCase(m,lMs) => MCase(eval1(m),lMs)
   }
+
   def eval(m:M):M = try {
     eval(eval1(m))
   } catch {
     case _:Throwable => m
   }
-  /*
-  def kinding(K:Map[σ,σ],t:σ,k:k) {
-    k match {
-      case U =>
-      case krecord(lσs) =>
-        if(K.contains(t) && K(t) & k == k) else
-        if()
-      assert()
-    }
 
-    }
-  }
-  */
-  /*
   // Kinding rules
-
-  K ⊢     t : lσs  :- member(t:lσ2s,K), intersection(lσ2s,lσs,lσs).
-  _ ⊢  lσ2s : lσs  :- intersection(lσ2s,lσs,lσs).
-  K ⊢     t :{lσs} :- member(t:{lσ2s},K), intersection(lσ2s,lσs,lσs).
-  _ ⊢ {lσ2s}:{lσs} :- intersection(lσ2s,lσs,lσs).
-  _ ⊢     _ : u.
-  */
-  // Free Type variables
-  def ftv(σ:σ):Set[x] = σ match {
-    case tx(x) => Set(x)
-    case _ if b(σ) => Set()
-    case tarr(σ1,σ2) => ftv(σ1)++ftv(σ2)
-    case trecord(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
-    case tvariant(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
-    case ∀(t,k,σ) => kftv(k)++ftv(σ) - t
+  def toK(K:Map[x,k],σ:σ):k = σ match {
+    case tx(x) =>
+      K.get(x) match {
+        case Some(k) => k
+        case None => U
+      }
+    case trecord(lts) => krecord(lts)
+    case tvariant(lts) => kvariant(lts)
+    case _ => U
   }
-  def kftv(k:k):Set[x] = k match {
-    case U => Set()
-    case krecord(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
-    case kvariant(lMs) => lMs.foldLeft(Set[x]()){case(tv,(_,m))=>tv++ftv(m)}
+  def containsK(K:Map[x,k],σ:σ,k2:k) = (toK(K,σ),k2) match {
+    case (_,U) => true
+    case (krecord(lts1),krecord(lts2)) => lts1.toSet ++ lts2.toSet == lts1.toSet
+    case (kvariant(lts1),kvariant(lts2)) => lts1.toSet ++ lts2.toSet == lts1.toSet
+    case (_,_) => false
   }
-  def tftv(T:Map[x,σ]):Set[x] =
-    T.foldLeft(Set[x]()){case(tv,(_,σ))=>tv++ftv(σ)}
 
   // Type system
   def ti(K:Map[x,k],T:Map[x,σ],M:M):σ = M match {
@@ -143,54 +125,58 @@ object sos2 {
     case MInt(i) => tint  // CONST
     case MTrue   => tbool // CONST
     case MFalse  => tbool // CONST
-    case Mλ(x,σ1,m1) => tarr(σ1,ti(K,T+(x->σ1),m1)) // ABS
+    case Mλ(x,σ1,m2) => // ABS
+      val σ2 = ti(K,T+(x->σ1),m2)
+      tarr(σ1,σ2)
     case MApp(m1,m2) => // APP
-      ti(K,T,m1) match {
+      val σ = ti(K,T,m1)
+      σ match {
         case tarr(σ1,σ2) =>
           if (σ1 != ti(K,T,m2)) throw new Exception("error")
           σ2
+        case _ => throw new Exception("error")
       }
     case MTλ(t,k,m) => // TABS
-      //val ftv = tftv(T)
-      //if(!ftv.contains(t)) throw new Exception("error")
       val σ = ti(K+(t->k),T,m)
       ∀(t,k,σ)
     case MTApp(m,σ2) => // TAPP
-      ti(K,T,m) match {
+      val σ1 = ti(K,T,m)
+      σ1 match {
         case ∀(t,k,σ1) =>
-          // kinding(K,σ2,k)
+          if(!containsK(K,σ2,k)) throw new Exception("kind error")
           tsub(Map(t->σ2),σ1)
+        case _ => throw new Exception("error")
       }
     case MRecord(lMs) => // RECORD
       trecord(lMs.map{case(li,mi)=>(li,ti(K,T,mi))})
     case MDot(m, l) => // DOT
       val σ1 = ti(K,T,m)
-      //val k=kinding(K, σ1)
-      //k.toMap.apply(l)
-      σ1 match {
-        case trecord(lts) => lts.toMap.apply(l)
+      toK(K,σ1) match {
+        case krecord(lts) => lts.toMap.apply(l)
+        case _ => throw new Exception("error")
       }
     case MModify(m1,l,m2) => // MODIFY
       val σ1 = ti(K,T,m1)
       val σ2 = ti(K,T,m2)
-      //K ⊢ σ1:[l:σ2]
+      if (!containsK(K,σ1,krecord(List(l->σ2)))) throw new Exception("error")
       σ1
     case MVariant(l,m,σ2) => // VARIANT
       val σ1=ti(K,T,m)
-      // K ⊢ σ2:{[l:σ1]}
+      if (!containsK(K,σ2,kvariant(List(l->σ1)))) throw new Exception("error")
       σ2
     case MCase(m,lMs) => // CASE
       val t1 = ti(K,T,m)
-      (t1,lMs.map{case(li,mi)=>(li,ti(K,T,mi))}) match {
-        case (tvariant(vs),lts @ (_,tarr(_,σ))::_) =>
-          lts.foreach {
+      lMs.map{case(li,mi)=>(li,ti(K,T,mi))} match {
+        case lts @ (_,tarr(_,σ))::_ =>
+          val lts2 = lts.map {
             case(li,tarr(σi,σ_))=>
-              if(vs.toMap.apply(li) != σi) throw new Exception("error")
               if(σ != σ_) throw new Exception("error")
+              (li,σi)
             case (_,_) => throw new Exception("error")
           }
+          if(!containsK(K,tvariant(lts2),toK(K,t1))) throw new Exception("error")
           σ
-        case (_,_) => throw new Exception("error")
+        case _ => throw new Exception("error")
       }
   }
 }
