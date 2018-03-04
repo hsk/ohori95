@@ -1,12 +1,15 @@
 // Second-Order System Λ∀,#
 object sos2 {
   // Syntaxs
+
   type l = String
   type x = String
+
   trait k
   case object U extends k
   case class krecord(v:List[(l,σ)]) extends k
   case class kvariant(v:List[(l,σ)]) extends k
+
   trait σ
   case object tbool extends σ
   case object tint extends σ
@@ -15,6 +18,7 @@ object sos2 {
   case class trecord(v:List[(l,σ)]) extends σ
   case class tvariant(v:List[(l,σ)]) extends σ
   case class ∀(t:x,k:k,σ:σ) extends σ
+
   def t(t:σ) = t match {case tx(_)=>true case _=>false}
   def b(t:σ) = t == tbool || t == tint
   def q(a:Any) = a match {case _:σ => true case _ => false}
@@ -25,7 +29,7 @@ object sos2 {
   case object MFalse extends M
   case class MInt(v:Int) extends M
   case class Mx(v:String) extends M
-  case class Mλ(x:String,σ:σ,M:M) extends M
+  case class MAbs(x:String,σ:σ,M:M) extends M
   case class MApp(M1:M,M2:M) extends M
   case class MTλ(t:String,k:k,M:M) extends M
   case class MTApp(M1:M,σ:σ) extends M
@@ -59,7 +63,7 @@ object sos2 {
     case Mx(x) if S.contains(x) => msub(S,S(x))
     case Mx(x) => Mx(x)
     case m if cb(m) => m
-    case Mλ(x,σ,m) => Mλ(x,σ,msub(S - x,m))
+    case MAbs(x,σ,m) => MAbs(x,σ,msub(S - x,m))
     case MApp(m1,m2) => MApp(msub(S,m1),msub(S,m2))
     case MTApp(m,σ) => MTApp(msub(S,m),σ)
     case MTλ(t,k,m) => MTλ(t,k,msub(S,m))
@@ -70,7 +74,7 @@ object sos2 {
     case MCase(m,lMs) => MCase(msub(S,m),lMs.map{case(l,m)=>(l,msub(S,m))})
   }
   def mtsub(S:Map[x,σ],M:M):M = M match {
-    case Mλ(x,σ,m) => Mλ(x,tsub(S,σ),mtsub(S,m))
+    case MAbs(x,σ,m) => MAbs(x,tsub(S,σ),mtsub(S,m))
     case MApp(m1,m2) => MApp(mtsub(S,m1),mtsub(S,m2))
     case MTApp(m,σ) => MTApp(mtsub(S,m),tsub(S,σ))
     case MTλ(t,k,m) => MTλ(t,ksub(S-t,k),mtsub(S-t,m)) // todo to prolog
@@ -84,7 +88,7 @@ object sos2 {
 
   // Reduction rules
   def eval1(M:M):M = M match {
-    case MApp(Mλ(x,_,m),n) => msub(Map(x->n),m)       // (β)
+    case MApp(MAbs(x,_,m),n) => msub(Map(x->n),m)       // (β)
     case MTApp(MTλ(t,_,m),σ) => mtsub(Map(t->σ), m)   // (type-β)
     case MDot(MRecord(lMs),li) => lMs.toMap.apply(li) // (dot)
     case MModify(MRecord(lMs),l,m) => MRecord(lMs.map{case(li,mi)=>(li,if(l==li)m else mi)})// (modify)
@@ -125,7 +129,7 @@ object sos2 {
     case MInt(i) => tint  // CONST
     case MTrue   => tbool // CONST
     case MFalse  => tbool // CONST
-    case Mλ(x,σ1,m2) => // ABS
+    case MAbs(x,σ1,m2) => // ABS
       val σ2 = ti(K,T+(x->σ1),m2)
       tarr(σ1,σ2)
     case MApp(m1,m2) => // APP

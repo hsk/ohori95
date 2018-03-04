@@ -18,37 +18,37 @@ class parser_test extends FunSpec {
       assertResult(Mx("x"))(parseM("x"))
     }
     it("λ") {
-      assertResult(Mλ("x",tx("t"),Mx("x")))(
+      assertResult(MAbs("x",tx("t"),Mx("x")))(
         parseM("λx:t.x"))
     }
-    it("m_app") {
-      assertResult(MApp(Mλ("x",tx("t"),Mx("x")),MInt(1)))(
+    it("app") {
+      assertResult(MApp(MAbs("x",tx("t"),Mx("x")),MInt(1)))(
         parseM("(λx:t.x) 1"))
     }
-    it("m_kapp") {
+    it("kapp") {
       assertResult(MTλ("x",U,MTApp(Mx("x"),tint)))(
         parseM("λx::U.(x!int)"))
     }
-    it("m_record") {
+    it("record") {
       assertResult(MRecord(List("x"->MInt(1),"y"->MInt(2))))(
         parseM("{x=1,y=2}"))
       assertResult(MDot(MRecord(List("x"->MInt(1),"y"->MInt(2))),"x"))(
         parseM("{x=1,y=2}#x"))
     }
-    it("m_record2") {
+    it("record2") {
       assertResult(MModify(MRecord(List("x"->MInt(1),"y"->MInt(2))),"x",MInt(2)))(
         parseM("modify({x=1,y=2},x,2)"))
     }
-    it("m_variant") {
+    it("variant") {
       assertResult(MVariant("eint",MInt(1),tvariant(List("eint"->tint,"eadd"->trecord(List("_1"->tint,"_2"->tint))))))(
         parseM("<eint=1>:<eint:int,eadd:{_1:int,_2:int}>"))
     }
-    it("m_variant2") {
+    it("variant2") {
       assertResult(
         MCase(MVariant("eint",MInt(1),tvariant(List("eint"->tint,"eadd"->trecord(List("_1"->tint,"_2"->tint))))),
           List(
-            "eint"->Mλ("x",tint,Mx("x")),
-            "eadd"->Mλ("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"_1")),MDot(Mx("x"),"_2"))))
+            "eint"->MAbs("x",tint,Mx("x")),
+            "eadd"->MAbs("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"_1")),MDot(Mx("x"),"_2"))))
           )
         )(
           parseM("""

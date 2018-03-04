@@ -14,14 +14,14 @@ class sos2test extends FunSpec {
     it("x2") {assert(!x(MTrue))}
     it("x3") {assert(!x(MInt(1)))}
     it("m_xcb") {assert(m(MInt(1)) && m(MTrue) && m(Mx("xxx")))}
-    it("m_λ") {assert(m(Mλ("x",tx("t"),Mx("x"))))}
-    it("m_app") {assert(m(MApp(Mλ("x",tx("t"),Mx("x")),MInt(1))))}
+    it("m_λ") {assert(m(MAbs("x",tx("t"),Mx("x"))))}
+    it("m_app") {assert(m(MApp(MAbs("x",tx("t"),Mx("x")),MInt(1))))}
     it("m_kapp") {assert(m(MTλ("x",U,MTApp(Mx("x"),tint))))}
     it("m_record") {assert(m(MRecord(List("x"->MInt(1),"y"->MInt(2)))))}
     it("m_record2") {assert(m(MDot(MRecord(List("x"->MInt(1),"y"->MInt(2))),"x")))}
     it("m_record3") {assert(m(MModify(MRecord(List("x"->MInt(1),"y"->MInt(2))),"x",MInt(2))))}
     it("m_variant") {assert(m(MVariant("eint",MInt(1),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint)))))))}
-    it("m_variant2") {assert(m(MCase(MVariant("eint",MInt(1),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))),List("eint"->Mλ("x",tint,Mx("x")),"eadd"->Mλ("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"1")),MDot(Mx("x"),"2")))))))}
+    it("m_variant2") {assert(m(MCase(MVariant("eint",MInt(1),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))),List("eint"->MAbs("x",tint,Mx("x")),"eadd"->MAbs("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"1")),MDot(Mx("x"),"2")))))))}
   }
   describe("q1") {
     test("x", q(tx("x")))
@@ -57,35 +57,24 @@ class sos2test extends FunSpec {
     test("x3", msub(Map("y"->Mx("z"),"x"->Mx("y")),Mx("x"))==Mx("z"))
     test("x4", msub(Map("x"->Mx("y"),"y"->Mx("z")),Mx("x"))==Mx("z"))
     test("x5", msub(Map("y"->Mx("z"),"x"->Mx("y")),Mx("x"))==Mx("z"))
-    test("λ", msub(Map("x"->Mx("y"),"y"->Mx("z")),Mλ("x",tx("t"),Mx("x")))==Mλ("x",tx("t"),Mx("x")))
-    test("λ2", msub(Map("x"->Mx("y"),"y"->Mx("z")),Mλ("a",tx("t"),Mx("x")))==Mλ("a",tx("t"),Mx("z")))
-    test("λ3", msub(Map("y"->Mx("z"),"x"->Mx("y")),Mλ("a",tx("t"),Mx("x")))==Mλ("a",tx("t"),Mx("z")))
-    test("app", msub(Map("x"->Mx("y")),MApp(Mλ("x",tx("t"),Mx("x")),Mx("x")))==MApp(Mλ("x",tx("t"),Mx("x")),Mx("y")))
-    test("app2", msub(Map("x"->Mx("y"),"a"->Mx("b")),MApp(Mλ("a",tx("t"),Mx("x")),Mx("a")))==MApp(Mλ("a",tx("t"),Mx("y")),Mx("b")))
+    test("λ", msub(Map("x"->Mx("y"),"y"->Mx("z")),MAbs("x",tx("t"),Mx("x")))==MAbs("x",tx("t"),Mx("x")))
+    test("λ2", msub(Map("x"->Mx("y"),"y"->Mx("z")),MAbs("a",tx("t"),Mx("x")))==MAbs("a",tx("t"),Mx("z")))
+    test("λ3", msub(Map("y"->Mx("z"),"x"->Mx("y")),MAbs("a",tx("t"),Mx("x")))==MAbs("a",tx("t"),Mx("z")))
+    test("app", msub(Map("x"->Mx("y")),MApp(MAbs("x",tx("t"),Mx("x")),Mx("x")))==MApp(MAbs("x",tx("t"),Mx("x")),Mx("y")))
+    test("app2", msub(Map("x"->Mx("y"),"a"->Mx("b")),MApp(MAbs("a",tx("t"),Mx("x")),Mx("a")))==MApp(MAbs("a",tx("t"),Mx("y")),Mx("b")))
     test("kapp", msub(Map("x"->Mx("y")),MTApp(MTλ("x",U,Mx("x")),tint))==MTApp(MTλ("x",U,Mx("y")),tint))
     test("record", msub(Map("x"->Mx("z")),MRecord(List("x"->Mx("x"),"y"->MInt(2))))==MRecord(List("x"->Mx("z"),"y"->MInt(2))))
     test("record2", msub(Map("x"->Mx("z")),MDot(MRecord(List("x"->Mx("x"),"y"->MInt(2))),"x"))==MDot(MRecord(List("x"->Mx("z"),"y"->MInt(2))),"x"))
     test("record3", msub(Map("x"->Mx("z")),MModify(MRecord(List("x"->Mx("x"),"y"->MInt(2))),"x",Mx("x")))==MModify(MRecord(List("x"->Mx("z"),"y"->MInt(2))),"x",Mx("z")))
     test("variant", msub(Map("x"->Mx("z")),MVariant("eint",Mx("x"),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))))==
       MVariant("eint",Mx("z"),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))))
-    test("variant2", msub(Map("x"->Mx("z")),MCase(MVariant("eint",Mx("x"),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))),List("eint"->Mλ("x",tint,Mx("x")),"eadd"->Mλ("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"1")),MDot(Mx("x"),"2"))))))==
-    MCase(MVariant("eint",Mx("z"),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))),List("eint"->Mλ("x",tint,Mx("x")),"eadd"->Mλ("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"1")),MDot(Mx("x"),"2"))))))
+    test("variant2", msub(Map("x"->Mx("z")),MCase(MVariant("eint",Mx("x"),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))),List("eint"->MAbs("x",tint,Mx("x")),"eadd"->MAbs("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"1")),MDot(Mx("x"),"2"))))))==
+    MCase(MVariant("eint",Mx("z"),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))),List("eint"->MAbs("x",tint,Mx("x")),"eadd"->MAbs("x",tint,MApp(MApp(Mx("add"),MDot(Mx("x"),"1")),MDot(Mx("x"),"2"))))))
   }
   describe("eval") {
-    test("λ", eval(MApp(Mλ("x",tint,Mx("x")),MInt(1))) == MInt(1))
-    test("λ2", eval(MTApp(MTλ("t",U,Mλ("x",tx("t"),Mx("x"))),tint)) == Mλ("x",tint,Mx("x")))
-    test("λ3", eval(MApp(MTApp(MTλ("t",U,Mλ("x",tx("t"),Mx("x"))),tint),MInt(1))) == MInt(1))
-    test("record", eval(MDot(MRecord(List("x"->MInt(1),"y"->MInt(2))),"x"))==MInt(1))
-    test("record2", eval(MDot(MRecord(List("x"->MInt(1),"y"->MInt(2))),"y"))==MInt(2))
-    test("record3", eval(MDot(MRecord(List("x"->MApp(Mλ("x",tint,Mx("x")),MInt(1)),"y"->MInt(2))),"x"))==MInt(1))
-    test("record4", eval(MModify(MRecord(List("x"->MInt(1),"y"->MInt(2))),"x",MInt(10)))==MRecord(List("x"->MInt(10),"y"->MInt(2))))
-    test("record5", eval(MApp(Mλ("z",tint,MRecord(List("y"->Mx("z")))),MInt(10)))==MRecord(List("y"->MInt(10))))
-    test("record6", eval(MModify(MApp(Mλ("z",tint,MRecord(List("x"->MInt(1),"y"->Mx("z")))),MInt(10)),"x",MInt(2)))==MRecord(List("x"->MInt(2),"y"->MInt(10))))
-    test("variant", eval(MVariant("eint",MInt(1),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint)))))) == MVariant("eint",MInt(1),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint))))))
-
-    test("variant2", eval(MCase(MApp(Mλ("z",tint,MVariant("eint",Mx("z"),tvariant(List("eint"->tint,"eadd"->trecord(List("1"->tint,"2"->tint)))))),MInt(1)),List("eint"->Mλ("x",tint,Mx("x")),"eadd"->Mλ("x",tint,MApp(MDot(Mx("x"),"1"),MDot(Mx("x"),"2")))))) == MInt(1))
+    test("λ", eval(MApp(MAbs("x",tint,MApp(MDot(Mx("x"),"1"),MDot(Mx("x"),"2")))))) == MInt(1))
   }
-  describe("typing") {
+  describe("typing") MAbs
     test("int", ti(Map(),Map(),MInt(10))==tint)
     test("true", ti(Map(),Map(),MTrue)==tbool)
     test("false", ti(Map(),Map(),MFalse)==tbool)
