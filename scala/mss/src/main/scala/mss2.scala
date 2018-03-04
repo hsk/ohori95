@@ -68,14 +68,16 @@ object mss2 {
   case class MInt(i:Int) extends M
   case class MAbs(x:x,σ:σ,M:M) extends M
   case class MApp(M1:M,M2:M) extends M
-  case class MPoly(M:M,σ:σ) extends M
-  case class MLet(x:x,σ:σ,M1:M,M2:M) extends M
   case class MRecord(v:List[(l,M)]) extends M
   case class MDot(M:M,σ:σ,l:l) extends M
   case class MModify(M:M,σ:σ,l:l,M2:M) extends M
   case class MVariant(l:l,M:M,σ:σ) extends M
   case class MCase(M:M,w:List[(l,M)]) extends M
+  case class MPoly(M:M,σ:σ) extends M
+  case class MLet(x:x,σ:σ,M1:M,M2:M) extends M
   def M(M:Any) = M match {case _:M=>true case _=>false}
+  def mi(m:M)   = m match {case MInt(_) => true case _ => false}
+  def mcb(m:M)  = m match {case MTrue => true case MFalse => true case _ => mi(m)}
 
   // Reduction rules
   def evHole(e:E):(E,E=>E) = e match {
@@ -147,69 +149,61 @@ object mss2 {
     case ECase(e,les) => ECase(esub(S,e),les.map{case(l,e)=>(l,esub(S,e))})
     case ELet(x,e1,e2) => ELet(x,esub(S,e1),esub(S,e2))
   }
-
-  /*
-  tsub(S,X,N_) :- t(X),member(N/X,S),tsub(S,N,N_).
-  tsub(_,X1,X1) :- t(X1).
-  tsub(_,B,B) :- b(B).
-  tsub(S,(Q1->Q2),(Q1_->Q2_)) :- tsub(S,Q1,Q1_),tsub(S,Q2,Q2_).
-  tsub(S,LMs,LMs_) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
-  tsub(S,{LMs},{LMs_}) :- maplist({S}/[L:M,L:M_]>>tsub(S,M,M_),LMs,LMs_).
-  tsub(S,∀(T,K,Q),∀(T,K_,Q_)) :- subtract(S,[_/T],S_),ksub(S_,K,K_),tsub(S_,Q,Q_).
-
-  ksub(_,u,u).
-  ksub(S,LQs,LQs_) :- maplist({S}/[L:Q,L:Q_]>>tsub(S,Q,Q_), LQs,LQs_).
-  ksub(S,{LQs},{LQs_}) :- maplist({S}/[L:Q,L:Q_]>>tsub(S,Q,Q_), LQs,LQs_).
-
+  def tsub(S:Map[x,σ],σ:σ):σ = σ match {
+    case tx(x) if S.contains(x) => tsub(S,S(x))
+    case tx(x) => tx(x)
+    case _ if b(σ) => σ
+    case tarr(σ1,σ2) => tarr(tsub(S,σ1),tsub(S,σ1))
+    case trecord(lMs) => trecord(lMs.map{case(l,t)=>(l,tsub(S,t))})
+    case tvariant(lMs) => tvariant(lMs.map{case(l,t)=>(l,tsub(S,t))})
+    case ∀(t,k,σ) => ∀(t,ksub(S-t,k),tsub(S-t,σ))
+  }
+  def ksub(S:Map[x,σ],k:k):k = k match {
+    case U => U
+    case krecord(lMs) => krecord(lMs.map{case(l,t)=>(l,tsub(S,t))})
+    case kvariant(lMs) => kvariant(lMs.map{case(l,t)=>(l,tsub(S,t))})
+  }
   def msub(S:Map[x,M],M:M):M = M match {
     case Mx(x) if S.contains(x) => msub(S,S(x))
     case Mx(x) => Mx(x)
-    case m if cb(m) => m
+    case MTApp(m,σ) => MTApp(msub(S,m),σ)
+    case m if mcb(m) => m
     case MAbs(x,σ,m) => MAbs(x,σ,msub(S - x,m))
     case MApp(m1,m2) => MApp(msub(S,m1),msub(S,m2))
-    case MTApp(m,σ) => MTApp(msub(S,m),σ)
-    case MTλ(t,k,m) => MTλ(t,k,msub(S,m))
     case MRecord(lms) => MRecord(lms.map{case(l,m)=>(l,msub(S,m))})
-    case MDot(m,l) => MDot(msub(S,m),l)
-    case MModify(m1,l,m2) => MModify(msub(S,m1),l,msub(S,m2))
+    case MDot(m,σ,l) => MDot(msub(S,m),σ,l)
+    case MModify(m1,σ,l,m2) => MModify(msub(S,m1),σ,l,msub(S,m2))
     case MVariant(l,m,σ) => MVariant(l,msub(S,m),σ)
     case MCase(m,lMs) => MCase(msub(S,m),lMs.map{case(l,m)=>(l,msub(S,m))})
+    case MPoly(m,σ) => MPoly(msub(S,m),σ)
+    case MLet(x,σ,m1,m2) => MLet(x,σ,msub(S,m1),msub(S-x,m2))
   }
-  msub(S,X,N_) :- x(X),member(N/X,S),msub(S,N,N_).
-  msub(_,X,X) :- x(X).
-  msub(S,(X!T),(X_!T)) :- msub(S,X,X_).
-  msub(_,CB,CB) :- cb(CB).
-  msub(S,λ(X:Q,M),λ(X:Q,M_)) :- subtract(S,[_/X],S_),msub(S_,M,M_).
-  msub(S,(M1$M2),(M1_$M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
-  msub(S,(M!Q),(M_!Q)) :- msub(S,M,M_).
-  msub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>msub(S,M,M_),LMs,LMs_).
-  msub(S,((M:T)#L),((M_:T)#L)) :- msub(S,M,M_).
-  msub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- msub(S,M1,M1_), msub(S,M2,M2_).
-  msub(S,{[L=M]}:Q,{[L=M_]}:Q) :- msub(S,M,M_).
-  msub(S,case(M,{LMs}),case(M_,{LMs_})) :- msub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>msub(S,Mi,Mi_),LMs,LMs_).
-
-  mtsub(S,X,N_) :- x(X),member(N/X,S),mtsub(S,N,N_).
-  mtsub(S,(X!T),(X_!T_)) :- tsub(S,T,T_),mtsub(S,X,X_).
-  mtsub(S,λ(X1:Q,M),λ(X1:Q_,M_)) :- tsub(S,Q,Q_),mtsub(S,M,M_).
-  mtsub(S,(M1$M2),(M1_$M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
-  mtsub(S,(M!Q),(M_!Q_)) :- mtsub(S,M,M_), tsub(S,Q,Q_).
-  mtsub(S,LMs,LMs_) :- maplist({S}/[L=M,L=M_]>>mtsub(S,M,M_),LMs,LMs_).
-  mtsub(S,((M:T)#L),((M_:T_)#L)) :- tsub(S,T,T_),mtsub(S,M,M_).
-  mtsub(S,modify(M1,L,M2),modify(M1_,L,M2_)) :- mtsub(S,M1,M1_), mtsub(S,M2,M2_).
-  mtsub(S,{[L=M]}:Q,{[L=M_]}:Q_) :- mtsub(S,M,M_),tsub(S,Q,Q_).
-  mtsub(S,case(M,{LMs}),case(M_,{LMs_})) :- mtsub(S,M,M_),maplist({S}/[L=Mi,L=Mi_]>>mtsub(S,Mi,Mi_),LMs,LMs_).
-  mtsub(_,M,M).
-
-  subE(S,E,E_) :- maplist(subE1(S),E,E_).
-  subE1(S,(T1,T2),(T1_,T2_)) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
-  subT(S,T,T_) :- maplist(subT1(S),T,T_).
-  subT1(S,(X:T2),(X:T2_)) :- tsub(S,T2,T2_).
-  ssub(S,S1,S1_) :- maplist(ssub1(S),S1,S1_).
-  ssub1(S,T1/T2,T1_/T2_) :- tsub(S,T1,T1_),tsub(S,T2,T2_).
-
-
-  % Free Type variables
-  :- begin_var_names(['^[τtxσk]'],['^(true|bool|int)$']).
+  def mtsub(S:Map[x,σ],M:M):M = M match {
+    case MTApp(m,σ) => MTApp(mtsub(S,m),tsub(S,σ))
+    case MAbs(x,σ,m) => MAbs(x,tsub(S,σ),mtsub(S,m))
+    case MApp(m1,m2) => MApp(mtsub(S,m1),mtsub(S,m2))
+    case MRecord(lMs) => MRecord(lMs.map{case(l,m)=>(l,mtsub(S,m))})
+    case MDot(m,σ,l) => MDot(mtsub(S,m),tsub(S,σ),l)
+    case MModify(m1,σ,l,m2) => MModify(mtsub(S,m1),tsub(S,σ),l,mtsub(S,m2))
+    case MVariant(l,m,σ) => MVariant(l,mtsub(S,m),tsub(S,σ))
+    case MCase(m,lMs) => MCase(mtsub(S,m),lMs.map{case(l,m)=>(l,mtsub(S,m))})
+    case MPoly(m,σ) => MPoly(mtsub(S,m),σ)
+    case MLet(x,σ,m1,m2) => MLet(x,tsub(S,σ),mtsub(S,m1),mtsub(S,m2))
+    case _ => M
+  }
+  def xtsub(S:Map[x,σ],x:x):x =
+    S.get(x) match {
+      case Some(tx(x)) => xtsub(S,x)
+      case _ => x
+    }
+  def subEq(S:Map[x,σ],eq:Map[σ,σ]):Map[σ,σ] =
+    eq.map{case(t1,t2)=>(tsub(S,t1),tsub(S,t2))}
+  def subT(S:Map[x,σ],T:Map[x,σ]):Map[x,σ] =
+    T.map{case(x,t)=>(x,tsub(S,t))}
+  def ssub(S:Map[x,σ],S1:Map[x,σ]):Map[x,σ] =
+    S1.map{case(x,t)=>(xtsub(S,x),tsub(S,t))}
+  /*
+  // Free Type variables
 
   ftv(B,[]) :- b(B),!.
   ftv(X,[X]) :- x(X).
@@ -265,7 +259,7 @@ object mss2 {
   u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
     t(t), ftv(τ,FTV), \+member(t,FTV),
     member(t:u,K0), subtract(K0,[t:u],K),!,
-    subE([τ/t],E,E_), ksub([τ/t],K,K_),
+    subEq([τ/t],E,E_), ksub([τ/t],K,K_),
     ssub([τ/t],S,S1), union(S1,[τ/t],S_),
     ssub([τ/t],SK,SK1), union(SK1,[u/t],SK_).
   u(([(t,τ)|E],K0,S,SK) ⟹ (E_,K_,S_,SK_)) :-
@@ -279,7 +273,7 @@ object mss2 {
     member(t1:F1,K0), record(l:q,F1), member((t2,F2),K0), record(l:q,F2), subtract(K0,[(t1,F1),(t2,F2)],K),
     dom(F1,Dom1), dom(F2,Dom2), intersection(Dom1,Dom2,Dom12),
     maplist({F1,F2}/[l,(Ft1,Ft2)]>>(member(l:Ft1,F1),member(l:Ft2,F2)),Dom12,ED),
-    union(E,ED,E1), subE([t2/t1],E1,E_),
+    union(E,ED,E1), subEq([t2/t1],E1,E_),
     ksub([t2/t1],K,K1),'±'(F1, F2, F12),tsub([t2/t1],F12,F12_),union(K1,[(t2,F12_)],K_),
     ssub([t2/t1],S,S1), union(S1,[t2/t1],S_),
     ssub([t2/t1],SK,SK1), union(SK1,[F1/t1],SK_).
@@ -288,7 +282,7 @@ object mss2 {
     member(t1:F1,K0), record(l:q,F1), subtract(K0,[t1:F1],K),
     dom(F1,Dom1), dom(F2,Dom2),Dom1 ⊆ Dom2, ftv(F2,FTV), \+member(t, FTV),
     maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom1,ED),
-    union(E,ED,E1), subE([F2/t1],E1,E_),
+    union(E,ED,E1), subEq([F2/t1],E1,E_),
     ksub([F2/t1],K,K_),
     ssub([F2/t1],S,S1), union(S1,[F2/t1],S_),
     ssub([F2/t1],SK,SK1), union(SK1,[F1/t1],SK_).
@@ -303,7 +297,7 @@ object mss2 {
     member((t1,{F1}),K0),list(l:q,F1), member((t2,{F2}),K0),list(l:q,F2), subtract(K0,[(t1,{F1}),(t2,{F2})],K),
     dom(F1,Dom1), dom(F2,Dom2), intersection(Dom1,Dom2,Dom12),
     maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom12,ED),
-    union(E,ED,E1), subE([t2/t1],E1,E_),
+    union(E,ED,E1), subEq([t2/t1],E1,E_),
     ksub([t2/t1],K,K1), ±(F1,F2, F12), tsub([t2/t1],{F12},{F12_}), union(K1,[(t2,{F12_})],K_),
     ssub([t2/t1],S,S1), union(S1,[t2/t1],S_),
     ssub([t2/t1],SK,SK1), union(SK1,[{F1}/t1],SK_).
@@ -312,7 +306,7 @@ object mss2 {
     member((t1:{F1}),K0),list(l:q,F1), subtract(K0,[(t1:{F1})],K),
     dom(F1,Dom1), dom(F2,Dom2), Dom1 ⊆ Dom2, ftv(F2,FTV), \+member(t1, FTV),
     maplist({F1,F2}/[L,(Ft1,Ft2)]>>(member(L:Ft1,F1),member(L:Ft2,F2)),Dom1,ED),
-    union(E,ED,E1), subE([{F2}/t1],E1,E_),
+    union(E,ED,E1), subEq([{F2}/t1],E1,E_),
     ksub([{F2}/t1],K,K_),
     ssub([{F2}/t1],S,S1), union(S1,[{F2}/t1],S_),
     ssub([{F2}/t1],SK,SK1), union(SK1,[{F1}/t1],SK_).
