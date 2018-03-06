@@ -1,7 +1,8 @@
+package mss2
 import org.scalatest.FunSpec
 import mss2._
 import mss2parser.{parseE,parseσ,parsek,parseM}
-class parser_test extends FunSpec {
+class mss2parser_test extends FunSpec {
   def test(a:String,b:Boolean) = it(a) {assert(b)}
   def test[T](a:String,b:T,c:T) = it(a) {assertResult(b)(c)}
   describe("parseE") {

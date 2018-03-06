@@ -159,7 +159,7 @@ u([(T1,T2)|E],K,S,SK,(E_,K_,S_,SK_)) :-
   u(([(T2,T1)|E],K,S,SK) ⟹ (E1,K1,S1,SK1)),!,
   u(E1,K1,S1,SK1,(E_,K_,S_,SK_)).
 
-%u((E,K,S,SK) ⟹ _) :- writeln(a:u(E,K,S,SK)),fail.
+u((E,K,S,SK) ⟹ _) :- writeln(a:u(E,K,S,SK)),fail.
 %(i) type
 u(([(τ,τ)|E],K,S,SK) ⟹ (E,K,S,SK)).
 %(ii) 
@@ -251,7 +251,9 @@ wk(K,T,λ(x,E1), (K1,S1,λ(x:t_,M1),(t_->t1))) :-
 wk(K,T,(E1$E2),(K3,S321,(M1_ $ M2_),t3)) :-
   wk(K,T,E1,(K1,S1,M1,σ1)), subT(S1,T,T1),
   wk(K1,T1,E2,(K2,S2,M2,σ2)), tsub(S2,σ1,σ1_),
-  fresh(t), u(K2,[(σ1_,(σ2->t))],(K3,S3)),
+  fresh(t),
+  u(K2,[(σ1_,(σ2->t))],(K3,S3)),
+  writeln(u(K2,[(σ1_,(σ2->t))],(K3,S3))),
   union(S3,S2,S32), union(S32,S1,S321),
   mtsub(S32,M1,M1_), mtsub(S3,M2,M2_), tsub(S3,t,t3).
 wk(K,_,[],(K,[],[],[])).

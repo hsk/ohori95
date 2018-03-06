@@ -129,6 +129,7 @@ test(A,(M_:T_),K_) :- reset,wk([],[],A,(K,S,M,T)),cls(K,[],T,(_,T1)),mtsub(S,M,M
                       λ(x:'%x0',x) : ∀('%x0',u,('%x0'->'%x0'))).
   test(app)   :- test((λ(x,x)$1),
                       (λ(x:int,x)$1): int).
+  test(app) :- halt.
   %test(app)  :- test(λ(t::u,λ(x:t,x)) , ∀(t,u,(t->t)).
   %test(tapp) :- test((λ(t::u,λ(x:t,x)) ! int), int->int).
   test(record) :- test([x=1,y=2],

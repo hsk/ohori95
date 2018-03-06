@@ -1,3 +1,4 @@
+package mss2
 import util.parsing.combinator._
 
 object mss2parser extends RegexParsers {
