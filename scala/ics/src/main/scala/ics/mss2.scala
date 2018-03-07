@@ -239,11 +239,17 @@ object mss2 {
   // 3.4 Kinded Unification
   def ⊆(F1:List[x], F2:List[x]) = F1.toSet == (F2.toSet & F1.toSet)
   def ±(F1:List[(x,σ)], F2:List[(x,σ)]):List[(x,σ)] = {
-    (dom(F1)++dom(F2)).map{l=>
-      val t1 = F1.toMap.apply(l)
-      val t2 = F2.toMap.apply(l)
-      assert(t1==t2)
-      (l,t1)
+    (dom(F1)++dom(F2)).map{l =>
+      (F1.toMap.get(l),F2.toMap.get(l)) match {
+        case (Some(t1),Some(t2)) =>
+          assert(t1 == t2)
+          (l, t1)
+        case (Some(t1),None) =>
+          (l, t1)
+        case (None,Some(t2)) =>
+          (l, t2)
+        case (None,None) => throw new Exception("assert +-")
+      }
     }
   }
   def dom(F:List[(x,σ)]):List[x] = F.map{case(l,_)=>l}

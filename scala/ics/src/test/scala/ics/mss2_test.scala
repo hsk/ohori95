@@ -208,6 +208,10 @@ class mss2_test extends FunSpec {
       "modify((λz.{x=1,y=z}) 10,x,2)",
       "modify((λz:int.{x=1,y=z}) 10:{x:int,y:int},x,2)",
       "{x:int,y:int}") }
+    it("record9") { test(
+      "(λa.{k=a#x,j=a#y}){x=1,y=2}",
+      "(λa:{x:int,y:int}.{k=a:{x:int,y:int}#x,j=a:{x:int,y:int}#y}){x=1,y=2}",
+      "{k:int,j:int}" ) }
     it("variant") { tesk("<eint=1>",
       "<eint=1>:x0",
       "∀x0::<<eint:int>>.x0",
