@@ -1,4 +1,4 @@
-package mss2
+package ics
 import org.scalatest.FunSpec
 import mss2._
 import mss2parser.{parseE,parseσ,parsek,parseM}
@@ -90,29 +90,30 @@ class mss2_test extends FunSpec {
       assertResult(parseE("10"))(eval(parseE("(λz.z) ((λx.x) 10)")))
     }
     it("record") {
-     assertResult(parseE("1"))(eval(parseE("{x=1,y=2}#x")))
-     assertResult(parseE("2"))(eval(parseE("{x=1,y=2}#y")))
-     assertResult(parseE("1"))(eval(parseE("{x=(λx.x) 1,y=2}#x")))
+      assertResult(parseE("1"))(eval(parseE("{x=1,y=2}#x")))
+      assertResult(parseE("2"))(eval(parseE("{x=1,y=2}#y")))
+      assertResult(parseE("1"))(eval(parseE("{x=(λx.x) 1,y=2}#x")))
     }
     it("record2") {
-     assertResult(parseE("{x=2,y=2}"))(
-       eval(parseE("modify({x=1,y=2},x,2)")))
+      assertResult(parseE("{x=2,y=2}"))(
+        eval(parseE("modify({x=1,y=2},x,2)")))
     }
     it("record3") {
-     assertResult(parseE("{y=10}"))(
-       eval(parseE("(λz.{y=z}) 10")))
+      assertResult(parseE("{y=10}"))(
+        eval(parseE("(λz.{y=z}) 10")))
     }
     it("record4") {
-     assertResult(parseE("{x=1,y=10}"))(
-       eval(parseE("(λz.{x=1,y=z}) ((λx.x) 10)")))
-     assertResult(parseE("{x=2,y=10}"))(
-       eval(parseE("modify((λz.{x=1,y=z}) 10,x,2)")))
+      assertResult(parseE("{x=1,y=10}"))(
+        eval(parseE("(λz.{x=1,y=z}) ((λx.x) 10)")))
+      assertResult(parseE("{x=2,y=10}"))(
+        eval(parseE("modify((λz.{x=1,y=z}) 10,x,2)")))
     }
     it("variant") {
-     assertResult(parseE("<eint=1>"))(eval(parseE("<eint=1>")))
+      assertResult(parseE("<eint=1>"))(eval(parseE("<eint=1>")))
     }
     it("variant2") {
-     assertResult(parseE("1"))(eval(parseE("case (λz.<eint=z>) 1 of<eint=λx.x,eadd=λx.add x#_1 x#_2>")))
+      assertResult(parseE("1"))(
+        eval(parseE("case (λz.<eint=z>) 1 of<eint=λx.x,eadd=λx.add x#_1 x#_2>")))
     }
   }
   describe("eftv") {

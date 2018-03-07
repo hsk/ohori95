@@ -1,4 +1,4 @@
-package mss2
+package ics
 // ML-Style System λlet,#
 object mss2 {
 
@@ -228,6 +228,7 @@ object mss2 {
   // Type system
   var i = 0
   def reset() { i = 0 }
+  def reset(ii:Int) { i = ii }
   def fresh():x = {
     val I = i
     i += 1
