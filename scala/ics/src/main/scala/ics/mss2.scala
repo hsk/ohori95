@@ -1,5 +1,7 @@
-package ics
 // ML-Style System λlet,#
+
+package ics
+
 object mss2 {
 
   // Syntaxs
@@ -20,6 +22,7 @@ object mss2 {
   case class trecord(v:List[(l,σ)]) extends σ
   case class tvariant(v:List[(l,σ)]) extends σ
   case class ∀(t:x,k:k,σ:σ) extends σ
+  case class idx(x:x,t:σ,t2:σ) extends σ
 
   def t(t:σ) = t match {case tx(_)=>true case _=>false}
   def b(t:σ) = t == tbool || t == tint
@@ -66,9 +69,9 @@ object mss2 {
   case class MCase(M:M,w:List[(l,M)]) extends M
   case class MPoly(M:M,σ:σ) extends M
   case class MLet(x:x,σ:σ,M1:M,M2:M) extends M
-  def M(M:Any) = M match {case _:M=>true case _=>false}
-  def mi(m:M)   = m match {case MInt(_) => true case _ => false}
-  def mcb(m:M)  = m match {case MTrue => true case MFalse => true case _ => mi(m)}
+  def M(m:Any) = m match {case _:M=>true case _=>false}
+  def mi(m:M)  = m match {case MInt(_) => true case _ => false}
+  def mcb(m:M) = m match {case MTrue => true case MFalse => true case _ => mi(m)}
 
   // Reduction rules
   def evHole(e:E):(E,E=>E) = e match {
@@ -241,32 +244,20 @@ object mss2 {
   def ±(F1:List[(x,σ)], F2:List[(x,σ)]):List[(x,σ)] = {
     (dom(F1)++dom(F2)).map{l =>
       (F1.toMap.get(l),F2.toMap.get(l)) match {
-        case (Some(t1),Some(t2)) =>
-          assert(t1 == t2)
-          (l, t1)
-        case (Some(t1),None) =>
-          (l, t1)
-        case (None,Some(t2)) =>
-          (l, t2)
+        case (Some(t1),Some(t2)) => assert(t1 == t2); (l, t1)
+        case (Some(t1),None) => (l, t1)
+        case (None,Some(t2)) => (l, t2)
         case (None,None) => throw new Exception("assert +-")
       }
     }
   }
   def dom(F:List[(x,σ)]):List[x] = F.map{case(l,_)=>l}
 
-  def u(K:Map[σ,k],E:List[(σ,σ)]):(Map[σ,k],Map[x,σ]) = {
-    val (_,k0,s,_) = u(E,K,Map(),Map())
-    (k0,s)
-  }
-  def u(E:List[(σ,σ)],K:Map[σ,k],S:Map[x,σ],sk:Map[σ,k]):(List[(σ,σ)],Map[σ,k],Map[x,σ],Map[σ,k]) = E match {
-    case List() => (List(),K,S,sk) // writeln(b:u([],K,S,sk))
-    case (t1,t2)::e =>
-      val (e1,k1,s1,sK1) = try {
-         u1((t1,t2)::e,K,S,sk)
-      } catch {
-        case _:Throwable => u1((t2,t1)::e,K,S,sk)
-      }
-      u(e1,k1,s1,sK1)
+  def u(K:Map[σ,k],E:List[(σ,σ)]):(Map[σ,k],Map[x,σ]) = u(E,K,Map(),Map())
+  def u:((List[(σ,σ)],Map[σ,k],Map[x,σ],Map[σ,k]))=>(Map[σ,k],Map[x,σ]) = {
+    case (List(),k,s,sk) => (k,s)
+    case ((t1,t2)::e,k,s,sk) =>
+      u(try { u1((t1,t2)::e,k,s,sk) } catch { case _:Throwable => u1((t2,t1)::e,k,s,sk)})
   }
   def u1:(List[(σ,σ)],Map[σ,k],Map[x,σ],Map[σ,k])=>(List[(σ,σ)],Map[σ,k],Map[x,σ],Map[σ,k]) = {
     // case (e,k,s,sk) if {println("a:u1"+(e,k,s,sk)); false} => throw new Exception("assert")
@@ -298,7 +289,7 @@ object mss2 {
       (e:::dom(f1).map{l=>(f1.toMap.apply(l),f2.toMap.apply(l))},k,s,sk)
     // (vi) variant
     case((t1@tx(x1),t2@tx(x2))::e,k0,s,sk)
-      if ((k0.get(t1),k0.get(t2))match{case (Some(kvariant(f1)),Some(kvariant(f2)))=>true case (_,_) => false}) =>
+      if (k0.get(t1),k0.get(t2))==(Some(kvariant(_)),Some(kvariant(_))) =>
       val (kvariant(f1),kvariant(f2)) = (k0(t1),k0(t2))
       (subEq(Map(x1->t2),e:::(dom(f1).toSet & dom(f2).toSet).toList.map{l=>(f1.toMap.apply(l),f2.toMap.apply(l))}),
        subK(Map(x1->t2),k0-t1-t2)+(t2->ksub(Map(x1->t2),kvariant(±(f1,f2)))),
@@ -337,15 +328,14 @@ object mss2 {
     case EFalse => (K,Map(),MFalse,tbool)
     case Ex(x) =>
       def foldxq(x:M,q:σ,Ks:Map[σ,k],S:Map[x,σ]):(M,σ,Map[σ,k],Map[x,σ]) = q match {
-          case ∀(t_,k,q) =>
-            val Si = fresht()
-            val (x_,q_,ks_,s_) = foldxq(MTApp(x,Si),q,Ks,S)
-            (x_,q_,ks_ +(Si->k),s_ +(t_ -> Si))
-          case q => (x,q,Ks,S)
-        }
+        case ∀(t_,k,q) =>
+          val Si = fresht()
+          val (x_,q_,ks_,s_) = foldxq(MTApp(x,Si),q,Ks,S)
+          (x_,q_,ks_ +(Si->k),s_ +(t_ -> Si))
+        case q => (x,q,Ks,S)
+      }
       val (x_,sτ1,sKs,s)=foldxq(Mx(x),T(x),Map(),Map())
-      val sKs_ = sKs.map{case(si,ki)=>(si,ksub(s,ki))}
-      (K ++ sKs_,Map(),x_,tsub(s,sτ1))
+      (K ++ sKs.map{case(si,ki)=>(si,ksub(s,ki))},Map(),x_,tsub(s,sτ1))
     case EAbs(x,e1) =>
       val t = fresht()
       val (k1,s1,m1,t1) = wk(K+(t->U),T+(x->t),e1)

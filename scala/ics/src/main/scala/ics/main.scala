@@ -2,14 +2,18 @@ package ics
 
 object main extends App {
   def run(src:String) {
+    println("============")
     mss2.reset()
     val e = mss2parser.parseE(src)
     val (k,s,m,t) = mss2.wk(Map(),Map(),e)
-    val (_,t1) = mss2.cls(k,Map(),t)
+    val (k1,t1) = mss2.cls(k,s,t)
     val m_ = mss2.mtsub(s,m)
-    val c_ = ics.c(ics.lk(k),Map(),m_)
+    println(e)
     println(m_)
+    println("k="+k+ " lk="+ics.lk(k))
+    val c_ = ics.c(ics.lk(k),Map(),m_)
     println(c_)
+    println("------------ eval "+c_)
     println(ics.eval(c_))
   }
   run("1")
@@ -24,4 +28,6 @@ object main extends App {
   run("{z=(λy.λx.{a=x,b=y}) 1 2}")
   run("let f= λa.λb.modify(a,x,b) in {aa=f {z=5,x=1} 2,bb=f{x=1,y=5}2}")
   run("let f= λa.λb.λc.modify(modify(a,x,b),z,c) in {aa=f {z=5,x=1} 10 20,bb=f{z=0,x=1,y=5}10 20}")
+  run("<x={a=1,b=2}>")
+  run("case <x={a=1}> of <x=λy.y#a>") // todo add test
 }
