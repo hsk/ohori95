@@ -379,13 +379,24 @@ object mss2 {
         case ((li,ei),(ki1,ti1,ms1,lts1,k1,tts1,s1))=>
         val (ki,si,mi,τi) = wk(ki1,ti1,ei)
         val ti = fresht()
-        (ki,subT(si,ti1),(li,mi)::ms1,(li->ti)::lts1,k1+(ti->U),(τi,ti)::tts1,si++s1)
+        (ki,subT(si++s1,ti1),(li,mi)::ms1,(li->ti)::lts1,k1+(ti->U),(τi,ti)::tts1,si++s1)
       }
       val t0 = fresht()
       val tts_ = tts.map{case(τi,ti)=>(tsub(s,τi),(tarr(t0,ti)))}
       val (kn1,sn1) = u(kn++kn_,(tsub(s,τ0),tvariant(lts))::tts_)
       val s_ = sn1++s
       (kn1,s_, MCase(mtsub(s_,m0),lms.map{case(li,mi)=>(li,mtsub(s,mi))}),tsub(sn1,t0))
+    /*
+    WK(K,T,case e0 of <l1=e1,···,ln=en>) =
+      let (K0,S0,M0,τ0) = WK(K,T,e0)
+          (Ki,Si,Mi,τi) = WK(Ki−1,Si−1◦···◦S0(T),ei) (1 ≤ i ≤ n)
+          (Kn+1,Sn+1) =U(Kn{t0::U,···,tn::U},{(Sn◦···S1(τ0),<l1:t1,···,ln:tn>)}
+                        ∪{(Sn◦···Si+1(τi),ti→t0)|1 ≤ i ≤ n}) (t0,···,tn fresh)
+      in (Kn+1,Sn+1◦···◦S0,
+          (case Sn+1◦···◦S1(M0) of <···,li=Sn+1◦···◦Si+1(Mi),···>),Sn+1(t0))
+    WK(K,T,<l=e1>) = let (K1,S1,M1,τ1) = WK(K,T,e1)
+                     in (K1{t::<<l:τ1>>},S1,(<l=M1>:t),t) (t fresh)
+    */
     case EVariant(l,e1) =>
       val (k1,s1,m1,τ1) = wk(K,T,e1)
       val t = fresht()

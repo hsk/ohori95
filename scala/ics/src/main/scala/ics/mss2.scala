@@ -247,7 +247,7 @@ object mss2 {
         case (Some(t1),Some(t2)) => assert(t1 == t2); (l, t1)
         case (Some(t1),None) => (l, t1)
         case (None,Some(t2)) => (l, t2)
-        case (None,None) => throw new Exception("assert +-")
+        case (None,None) => throw new Exception("assert ±")
       }
     }
   }
@@ -257,7 +257,7 @@ object mss2 {
   def u:((List[(σ,σ)],Map[σ,k],Map[x,σ],Map[σ,k]))=>(Map[σ,k],Map[x,σ]) = {
     case (List(),k,s,sk) => (k,s)
     case ((t1,t2)::e,k,s,sk) =>
-      u(try { u1((t1,t2)::e,k,s,sk) } catch { case _:Throwable => u1((t2,t1)::e,k,s,sk)})
+      u(try { u1((t1,t2)::e,k,s,sk) } catch { case _:Throwable => u1((t2,t1)::e,k,s,sk) })
   }
   def u1:(List[(σ,σ)],Map[σ,k],Map[x,σ],Map[σ,k])=>(List[(σ,σ)],Map[σ,k],Map[x,σ],Map[σ,k]) = {
     // case (e,k,s,sk) if {println("a:u1"+(e,k,s,sk)); false} => throw new Exception("assert")
@@ -327,14 +327,15 @@ object mss2 {
     case ETrue => (K,Map(),MTrue,tbool)
     case EFalse => (K,Map(),MFalse,tbool)
     case Ex(x) =>
-      def foldxq(x:M,q:σ,Ks:Map[σ,k],S:Map[x,σ]):(M,σ,Map[σ,k],Map[x,σ]) = q match {
+      def foldxq(K:Map[σ,k],x:M,q:σ,Ks:Map[σ,k],S:Map[x,σ]):(M,σ,Map[σ,k],Map[x,σ]) = q match {
         case ∀(t_,k,q) =>
           val Si = fresht()
-          val (x_,q_,ks_,s_) = foldxq(MTApp(x,Si),q,Ks,S)
+          val (x_,q_,ks_,s_) = foldxq(K,MTApp(x,Si),q,Ks,S)
           (x_,q_,ks_ +(Si->k),s_ +(t_ -> Si))
+        //case tx(x1) if K.contains(q) && K(q) != U => foldxq(K-q,x,∀(x1,K(q),q),Ks,S)
         case q => (x,q,Ks,S)
       }
-      val (x_,sτ1,sKs,s)=foldxq(Mx(x),T(x),Map(),Map())
+      val (x_,sτ1,sKs,s)=foldxq(K,Mx(x),T(x),Map(),Map())
       (K ++ sKs.map{case(si,ki)=>(si,ksub(s,ki))},Map(),x_,tsub(s,sτ1))
     case EAbs(x,e1) =>
       val t = fresht()
@@ -370,19 +371,16 @@ object mss2 {
       (k3,s32++s1,MModify(mtsub(s32,m1),t2_,l,mtsub(s3,m2)),t2_)
     case ECase(e0,les) =>
       val (k0,s0,m0,τ0) = wk(K,T,e0)
+      val t0 = fresht()
       val (kn,_,lms,lts,kn_,tts,s) = les.foldRight(
-        (k0,subT(s0,T),List[(x,M)](),List[(x,σ)](),Map[σ,k](),List[(σ,σ)](),Map[x,σ]())
-      ){
-        case ((li,ei),(ki1,ti1,ms1,lts1,k1,tts1,s1))=>
+        (k0,subT(s0,T),List[(x,M)](),List[(x,σ)](),Map[σ,k](),List[(σ,σ)](),s0)
+      ) { case ((li,ei),(ki1,ti1,ms1,lts1,k1,tts1,s1))=>
         val (ki,si,mi,τi) = wk(ki1,ti1,ei)
         val ti = fresht()
-        (ki,subT(si,ti1),(li,mi)::ms1,(li->ti)::lts1,k1+(ti->U),(τi,ti)::tts1,si++s1)
+        (ki,subT(si++s1,ti1),(li,mi)::ms1,(li->ti)::lts1,k1+(ti->U),(τi,tarr(ti,t0))::tts1,si++s1)
       }
-      val t0 = fresht()
-      val tts_ = tts.map{case(τi,ti)=>(tsub(s,τi),(tarr(t0,ti)))}
-      val (kn1,sn1) = u(kn++kn_,(tsub(s,τ0),tvariant(lts))::tts_)
-      val s_ = sn1++s
-      (kn1,s_, MCase(mtsub(s_,m0),lms.map{case(li,mi)=>(li,mtsub(s,mi))}),tsub(sn1,t0))
+      val (kn1,sn1) = u(kn++kn_,(tsub(s--s0.keys,τ0),tvariant(lts))::tts.map{ case (τi,ti) => (tsub(s,τi),ti) })
+      (kn1,sn1++s, MCase(mtsub(sn1++s,m0),lms.map{case(li,mi)=>(li,mtsub(s,mi))}),tsub(sn1,t0))
     case EVariant(l,e1) =>
       val (k1,s1,m1,τ1) = wk(K,T,e1)
       val t = fresht()

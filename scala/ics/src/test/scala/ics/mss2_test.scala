@@ -1,7 +1,7 @@
 package ics
 import org.scalatest.FunSpec
 import mss2._
-import mss2parser.{parseE,parseσ,parsek,parseM}
+import mss2parser.{parseE, parseM, parsek, parseσ}
 
 class mss2_test extends FunSpec {
   def test(a:String,b:Boolean) = it(a) {assert(b)}
@@ -212,6 +212,12 @@ class mss2_test extends FunSpec {
       "(λa.{k=a#x,j=a#y}){x=1,y=2}",
       "(λa:{x:int,y:int}.{k=a:{x:int,y:int}#x,j=a:{x:int,y:int}#y}){x=1,y=2}",
       "{k:int,j:int}" ) }
+    /*
+    Expected MApp(MAbs(a,trecord(List((x,tint), (y,tint))),MRecord(List((k,MDot(Mx(a),trecord(List((x,tint), (y,tint))),x)),
+      (j,MDot(Mx(a),trecord(List((x,tint), (y,tint))),y))))),MRecord(List((x,MInt(1)), (y,MInt(2)))))
+    but got  MApp(MAbs(a,trecord(List((x,tint), (y,tint))),MRecord(List((k,MDot(Mx(a),trecord(List((x,tint), (y,tint))),x)),
+      (j,MDot(MTApp(Mx(a),tx(x3)),tx(x3),y))))),MRecord(List((x,MInt(1)), (y,MInt(2)))))
+    */
     it("variant") { tesk("<eint=1>",
       "<eint=1>:x0",
       "∀x0::<<eint:int>>.x0",
@@ -228,6 +234,16 @@ class mss2_test extends FunSpec {
       "case (λz.<eint=z>) 1 of <eint=λx.x,b=λx.x>",
       "case (λz:int.<eint=z>:<eint:int,b:int>) 1 of <eint=λx:int.x,b=λx:int.x>",
       "int") }
+    it("variant5") { test(
+      "case <x={a=1}> of <x=λy.y#a>",
+      "case <x={a=1}>:<x:{a:int}> of <x=λy:{a:int}.y:{a:int}#a>",
+      "int") }
+/*
+Expected MCase(MVariant(x,MRecord(List((a,MInt(1)))),tvariant(List((x,trecord(List((a,tint))))))),
+  List((x,MAbs(y,trecord(List((a,tint))),MDot(Mx(y),trecord(List((a,tint))),a))))),
+ but got MCase(MVariant(x,MRecord(List((a,MInt(1)))),tvariant(List((x,trecord(List((a,tint))))))),
+  List((x,MAbs(y,tx(x3),MDot(Mx(y),tx(x3),a)))))
+*/
     it("let") { test(
       "let x=1 in x",
       "let x:int=Poly(1:int) in x",
