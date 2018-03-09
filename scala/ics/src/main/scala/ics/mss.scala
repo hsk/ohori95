@@ -40,7 +40,7 @@ object mss {
 
   trait M
   case class Mx(x:x) extends M
-  case class MTApp(M1:M,σ:σ) extends M
+  case class MTApp(M1:M,σ:List[σ]) extends M
   case object MTrue extends M
   case object MFalse extends M
   case class MInt(i:Int) extends M
@@ -135,7 +135,7 @@ object mss {
   }
   def msub(S:Map[x,M],M:M):M = M match {
     case Mx(x) if S.contains(x) => msub(S,S(x))
-    case MTApp(m,σ) => MTApp(msub(S,m),σ)
+    case MTApp(m,σs) => MTApp(msub(S,m),σs)
     case MAbs(x,σ,m) => MAbs(x,σ,msub(S - x,m))
     case MApp(m1,m2) => MApp(msub(S,m1),msub(S,m2))
     case MRecord(lms) => MRecord(lms.map{case(l,m)=>(l,msub(S,m))})
@@ -148,7 +148,7 @@ object mss {
     case _ => M
   }
   def mtsub(S:Map[x,σ],M:M):M = M match {
-    case MTApp(m,σ) => MTApp(mtsub(S,m),tsub(S,σ))
+    case MTApp(m,σs) => MTApp(mtsub(S,m),σs.map{σ => tsub(S,σ)})
     case MAbs(x,σ,m) => MAbs(x,tsub(S,σ),mtsub(S,m))
     case MApp(m1,m2) => MApp(mtsub(S,m1),mtsub(S,m2))
     case MRecord(lMs) => MRecord(lMs.map{case(l,m)=>(l,mtsub(S,m))})
@@ -300,15 +300,15 @@ object mss {
     case ETrue => (K,Map(),MTrue,TBool)
     case EFalse => (K,Map(),MFalse,TBool)
     case Ex(x) =>
-      def foldxq(K:Map[σ,k],x:M,q:σ,Ks:Map[σ,k],S:Map[x,σ]):(M,σ,Map[σ,k],Map[x,σ]) = q match {
+      def foldxq(K:Map[σ,k],q:σ,Ks:Map[σ,k],S:Map[x,σ]):(List[σ],σ,Map[σ,k],Map[x,σ]) = q match {
         case TAll(t_,k,q) =>
           val Si = fresht()
-          val (x_,q_,ks_,s_) = foldxq(K,MTApp(x,Si),q,Ks,S)
-          (x_,q_,ks_ +(Si->k),s_ +(t_ -> Si))
-        case q => (x,q,Ks,S)
+          val (ts,q_,ks_,s_) = foldxq(K,q,Ks,S)
+          (Si::ts,q_,ks_ +(Si->k),s_ +(t_ -> Si))
+        case q => (List(),q,Ks,S)
       }
-      val (x_,sτ1,sKs,s)=foldxq(K,Mx(x),T(x),Map(),Map())
-      (K ++ sKs.map{case(si,ki)=>(si,ksub(s,ki))},Map(),x_,tsub(s,sτ1))
+      val (ts,sτ1,sKs,s)=foldxq(K,T(x),Map(),Map())
+      (K ++ sKs.map{case(si,ki)=>(si,ksub(s,ki))},Map(),if (ts==List()) Mx(x) else MTApp(Mx(x),ts),tsub(s,sτ1))
     case EAbs(x,e1) =>
       val t = fresht()
       val (k1,s1,m1,t1) = wk(K+(t->U),T+(x->t),e1)

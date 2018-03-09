@@ -58,7 +58,7 @@ object mss_parser extends RegexParsers {
   def M     : Parser[M]
             = (rep1(M1)                       ^^ {case ms=>ms.reduceLeft{MApp}})
   def M1    = (M2 ~ rep(":" ~>σ ~ ("#" ~>l))  ^^ {case m~ls=>ls.foldLeft(m){case(m,(σ~l))=>MDot(m,σ,l)}})
-  def M2    = (M3 ~ rep("!" ~>σ)              ^^ {case m~σs=>σs.foldLeft(m){MTApp}})
+  def M2    = (M3 ~ rep("!" ~>σ)              ^^ {case m~List()=>m case m~σs=>MTApp(m,σs)})
   def M3    = (x                              ^^ {case x=>Mx(x)}).
             | (mcb                            ^^ {case m=>m}).
             | ("λ" ~ x ~ ":" ~ σ ~ "." ~ M    ^^ {case _~x~_~σ~_~m=>MAbs(x,σ,m)}).

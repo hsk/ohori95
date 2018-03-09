@@ -89,20 +89,20 @@ object ics {
     case _ => U
   }
 
-  def idxSet2(t:σ,k:k):Set[(x,σ)] = k match {
+  def idxSet(t:σ,k:k):Set[(x,σ)] = k match {
     case U => Set()
     case krecord(f) => f.map{case(l,_)=>(l,t)}.toSet
     case kvariant(f) => f.map{case(l,_)=>(l,t)}.toSet
   }
   /*
-  def idxSet(σ:σ):Set[(x,σ)] = σ match {
-    case ∀(t,k,τ) => idxSet2(tx(t),k) ++ idxSet(τ)
+  def idxSet1(σ:σ):Set[(x,σ)] = σ match {
+    case ∀(t,k,τ) => idxSet(tx(t),k) ++ idxSet(τ)
     case _ => Set()
   }
   */
   def idxSetK(K:Map[σ,k]):Set[(x,σ)] =
     K.foldLeft(Set[(x,σ)]()) {
-      case (is1,(t,k)) => is1 ++ idxSet2(t,k)
+      case (is1,(t,k)) => is1 ++ idxSet(t,k)
     }
 
   def sortf(f:List[(x,σ)]):List[(x,σ)] = f.sortWith{case((l1,_),(l2,_))=>l1<l2}
@@ -114,11 +114,6 @@ object ics {
   def sortσ(σ:σ):(List[(x,k)],σ) = σ match {
     case TAll(ti,k,t) => val (l,t1) = sortσ(t); (ti->sortk(k)::l,t1)
     case t => (List(),t)
-  }
-
-  def getL(L:List[(x,(x,σ))],σ:σ):(List[(x,(x,σ))],List[x]) = σ match {
-    case TIdx(li,ti,t) => val ii = fresh(); val (l_,is) = getL(L,t); ((ii->(li,ti))::l_,ii::is)
-    case _ => (L,List())
   }
 
   def addIdx(σ:σ):σ = σ match {
@@ -135,30 +130,31 @@ object ics {
     case t => t
   }
 
-  def addλ(l:List[x],c:C):C = l match {
-    case List() => c
-    case ii::is => CAbs(ii,addλ(is,c))
-  }
-
-  def xts(m:M,ts:List[σ]):(M,List[σ]) = m match {
-    case MTApp(m,t) => xts(m,t::ts)
-    case c => (c,ts)
-  }
-
-  def mks(σ:σ,τs:List[σ]):(Map[x,σ],σ) = (σ,τs) match {
-    case (σ,List()) => (Map(),σ)
-    case (TAll(t,_,σ),τ::τs) => val(s,σ_) = mks(σ,τs); (s+(t->τ),σ_)
-    case (_,_) => throw new Exception("assert mks"+(σ,τs))
-  }
-
-  def addDot(L:List[(x,(x,σ))],S:Map[x,σ],xi:C,σ:σ):C = σ match {
-    case TIdx(l,t,t2) => addDot(L,S,CApp(xi,getci(L,l,tsub(S,t))),t2)
-    case _ => xi
+  def getci(L:List[(x,(x,σ))],l:x,τ:σ):C = {
+    val idxs = idxSet(τ, kinding(Map(), τ)).toList.zipWithIndex
+    idxs.find { case ((l1, τ1), i) => l == l1 && τ == τ1 } match {
+      case Some((_, i)) => CInt(i + 1)
+      case None =>
+        L.find { case (x, (l1, τ1)) => l == l1 && τ == τ1 } match {
+          case Some((x, _)) => Cx(x)
+          case None => throw new Exception("assert find index")
+        }
+    }
   }
 
   def c(L:List[(x,(x,σ))],T:Map[x,σ],M:M):C = M match {
     case Mx(x) => Cx(x)
-    case MTApp(_,_) => val (Mx(x),τs) = xts(M,List()); val (s,σ_) = mks(T(x),τs); addDot(L,s,Cx(x),σ_)
+    case MTApp(Mx(x),τs) =>
+      def mks(τs:List[σ],σ:σ):(Map[x,σ],σ) = (τs,σ) match {
+        case (List(),σ) => (Map(),σ)
+        case (τ::τs,TAll(t,_,σ)) => val(s,σ_) = mks(τs,σ); (s+(t->τ),σ_)
+        case (_,_) => throw new Exception("assert mks"+(σ,τs))
+      }
+      def addApp(L:List[(x,(x,σ))],S:Map[x,σ],σ:σ,c:C):C = σ match {
+        case TIdx(l,t,t2) => addApp(L,S,t2,CApp(c,getci(L,l,tsub(S,t))))
+        case _ => c
+      }
+      val (s,σ_) = mks(τs,T(x)); addApp(L,s,σ_,Cx(x))
     case MTrue => CTrue
     case MFalse => CFalse
     case MInt(i) => CInt(i)
@@ -169,20 +165,15 @@ object ics {
     case MModify(m1,τ,l,m2) => val c1 = c(L,T,m1); CModify(c1,getci(L,l,τ),c(L,T,m2))
     case MVariant(l,m,τ) => CVariant(getci(L,l,τ),c(L,T,m))
     case MCase(m,f) => CSwitch(c(L,T,m),f.map{case(li,mi)=>c(L,T,mi)})
-    case MPoly(m1,t) => val (_,idxs) = sortσ(addIdx(t)); val (l_,is) = getL(L,idxs); addλ(is,c(l_,T,m1))
+    case MPoly(m1,t) =>
+      def getL(L:List[(x,(x,σ))],σ:σ):(List[(x,(x,σ))],List[x]) = σ match {
+        case TIdx(li,ti,t) => val ii = fresh(); val (l_,is) = getL(L,t); ((ii->(li,ti))::l_,ii::is)
+        case _ => (L,List())
+      }
+      val (_,idxs) = sortσ(addIdx(t))
+      val (l_,is) = getL(L,idxs)
+      is.foldRight(c(l_,T,m1)){(x,c)=>CAbs(x,c)}
     case MLet(x,σ,m1,m2) => CLet(x,c(L,T,m1),c(L,T+(x->addIdx(σ)),m2))
-  }
-
-  def getci(L:List[(x,(x,σ))],l:x,τ:σ):C = {
-    val idxs = idxSet2(τ, kinding(Map(), τ)).toList.zipWithIndex
-    idxs.find { case ((l1, τ1), i) => l == l1 && τ == τ1 } match {
-      case Some((_, i)) => CInt(i + 1)
-      case None =>
-        L.find { case (x, (l1, τ1)) => l == l1 && τ == τ1 } match {
-          case Some((x, _)) => Cx(x)
-          case None => throw new Exception("assert find index")
-        }
-    }
   }
 
   def lk(K:Map[σ,k]):List[(x,(x,σ))] =

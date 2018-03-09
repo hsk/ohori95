@@ -111,7 +111,7 @@ class mss_parser_test extends FunSpec {
         parseM("(λx:t.x) 1"))
     }
     it("tapp") {
-      assertResult(MTApp(Mx("x"),TInt))(parseM("x!int"))
+      assertResult(MTApp(Mx("x"),List(TInt)))(parseM("x!int"))
     }
     it("record") {
       assertResult(MRecord(List("x"->MInt(1),"y"->MInt(2))))(
@@ -169,12 +169,12 @@ class mss_parser_test extends FunSpec {
     }
     it("let2") {
       assertResult(MLet("x",TAll("x0",U,TArr(Tx("x0"),Tx("x0"))),
-        MPoly(MAbs("x",Tx("x0"),Mx("x")),TAll("x0",U,TArr(Tx("x0"),Tx("x0")))),MTApp(Mx("id"),Tx("x1"))))(
+        MPoly(MAbs("x",Tx("x0"),Mx("x")),TAll("x0",U,TArr(Tx("x0"),Tx("x0")))),MTApp(Mx("id"),List(Tx("x1")))))(
         parseM("let x: ∀x0::U.x0->x0=Poly(λx:x0.x:∀x0::U.x0->x0) in id!x1"))
     }
     it("let3") {
       assertResult(MLet("x",TAll("x0",U,TArr(Tx("x0"),Tx("x0"))),
-        MPoly(MAbs("x",Tx("x0"),Mx("x")),TAll("x0",U,TArr(Tx("x0"),Tx("x0")))),MApp(MTApp(Mx("id"),TInt),MInt(1))))(
+        MPoly(MAbs("x",Tx("x0"),Mx("x")),TAll("x0",U,TArr(Tx("x0"),Tx("x0")))),MApp(MTApp(Mx("id"),List(TInt)),MInt(1))))(
         parseM("let x: ∀x0::U.x0->x0=Poly(λx:x0.x:∀x0::U.x0->x0) in id!int 1"))
     }
   }

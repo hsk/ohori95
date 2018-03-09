@@ -151,14 +151,6 @@ class ics_test extends FunSpec {
     */
   }
 
-  describe("xts") {
-    it("abc") { assertResult(parseM("a!b!c"))(parseM("(a!b)!c")) }
-    it("xts_a") { assertResult(xts(parseM("a"),List()))((Mx("a"),List())) }
-    it("xts_ab") { assertResult(xts(parseM("a!b"),List()))((Mx("a"),List(Tx("b")))) }
-    it("xts_abc") { assertResult(xts(parseM("a!b!c"),List()))((Mx("a"),List(Tx("b"),Tx("c")))) }
-    it("xts_abcd") { assertResult(xts(parseM("a!b!c!d"),List()))((Mx("a"),List(Tx("b"),Tx("c"),Tx("d")))) }
-  }
-
   describe("*") {
     it("getT") { assertResult(sortσ(parseσ("∀t2::{{b:int,a:bool}}.∀t3::{{a:t2}}.t2->t3")))(
       (List("t2"->parsek("{{a:bool,b:int}}"),"t3"->parsek("{{a:t2}}")),parseσ("t2->t3"))) }
@@ -173,19 +165,6 @@ class ics_test extends FunSpec {
                                      parseσ("∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
     it("rep5") { assertResult(addIdx(parseσ("∀x1::U.∀x2::{{a:x1}}.x2->x1")))(
                                      parseσ("∀x1::U.∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
-    it("getL1") {
-      reset()
-      assertResult(getL(List(),parseσ("idx(b,bt)=>c")))(
-        (List("x0"->("b",Tx("bt"))),List("x0")))
-    }
-    it("getL2") {
-      reset()
-      assertResult(getL(List(),parseσ("idx(a,at)=>idx(b,bt)=>c")))(
-        (List("x0"->("a",Tx("at")),"x1"->("b",Tx("bt"))),List("x0","x1")))
-    }
-    it("addλ") {
-      assertResult(addλ(List("a","b","c","d"),Cx("t")))(
-        CAbs("a",CAbs("b",CAbs("c",CAbs("d",Cx("t")))))) }
   }
 
 
