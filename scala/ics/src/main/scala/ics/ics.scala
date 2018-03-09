@@ -2,7 +2,7 @@
 package ics
 
 object ics {
-  import mss2._
+  import mss._
 
   trait C
   case object CTrue extends C
@@ -19,22 +19,17 @@ object ics {
   case class CSwitch(C:C,w:List[C]) extends C
 
   def v(c:C):Boolean = c match {
-    case c if cb(c) => true
+    case CInt(_) => true
+    case CTrue => true
+    case CFalse => true
     case CAbs(x,_) => true
     case CRecord(cs) => !cs.exists{case(c)=> !v(c)}
     case CVariant(l,c) => v(c)
     case _ => false
   }
 
-  def i(c:C)   = c match {case CInt(_) => true case _ => false}
-  def cb(c:C)  = c match {case CTrue => true case CFalse => true case _ => i(c)}
-  def x(c:C)   = c match {case Cx(_)=>true case _=>false}
-  def c(c:Any) = c match {case _:C=>true case _=>false}
-
   def csub(S:Map[x,C],c:C):C = c match {
     case Cx(x) if S.contains(x) => csub(S,S(x))
-    case Cx(x) => Cx(x)
-    case c if cb(c) => c
     case CAbs(x,c) => CAbs(x,csub(S - x,c))
     case CApp(c1,c2) => CApp(csub(S,c1),csub(S,c2))
     case CRecord(cs) => CRecord(cs.map{(c)=>csub(S,c)})
@@ -43,42 +38,31 @@ object ics {
     case CVariant(l,c) => CVariant(l,csub(S,c))
     case CSwitch(c,cs) => CSwitch(csub(S,c),cs.map{(c)=>csub(S,c)})
     case CLet(x,c1,c2) => CLet(x,csub(S,c1),csub(S-x,c2))
+    case _ => c
   }
 
-  def evHole(c:C):(C,C=>C) = c match {
-    case CApp(c1,c2) if !v(c1) =>
-      evHole(c1) match {case(c,h)=>(c,{c=>CApp(h(c),c2)})}
-    case CApp(v1,c2) if !v(c2) =>
-      evHole(c2) match {case(c,h)=>(c,{c=>CApp(v1,h(c))})}
-    case CLet(x,c1,c2) if !v(c1) =>
-      evHole(c1) match {case(c,h)=>(c,{c=>CLet(x,h(c),c2)})}
+  def eval1(c:C):C = c match {
+    case CApp(c1,c2) if !v(c1) => CApp(eval1(c1),c2)
+    case CApp(v1,c2) if !v(c2) => CApp(v1,eval1(c2))
+    case CLet(x,c1,c2) if !v(c1) => CLet(x,eval1(c1),c2)
     case CRecord(cs) =>
-      def find(hs:List[C],ls:List[C]):(C,C=>C) = ls match {
-        case List() => (c,{c=>c})
-        case c::ls if !v(c) => val (c1,h) = evHole(c); (c1,{c=>CRecord(hs.reverse:::h(c)::ls)})
+      def find(hs:List[C],ls:List[C]):C = ls match {
+        case List() => throw new Exception("error")
+        case c::ls if !v(c) => CRecord(hs.reverse:::eval1(c)::ls)
         case c::ls => find(c::hs,ls)
       }
       find(List(),cs)
-    case CDot(c,l) if !v(c) =>
-      evHole(c) match{case(c,h)=>(c,{c=>CDot(h(c),l)})}
-    case CModify(c1,l,c2) if !v(c1) =>
-      evHole(c1) match{case(c,h)=>(c,{c=>CModify(h(c),l,c2)})}
-    case CModify(v1,l,c2) if !v(c2) =>
-      evHole(c2) match{case(c,h)=>(c,{c=>CModify(v1,l,h(c))})}
-    case CVariant(l,c) if !v(c) =>
-      evHole(c) match{case(c,h)=>(c,{c=>CVariant(l,h(c))})}
-    case CSwitch(c,cs) if !v(c) =>
-      evHole(c) match{case(c,h)=>(c,{c=>CSwitch(h(c),cs)})}
-    case c => (c,{c=>c})
-  }
+    case CDot(c,l) if !v(c) => CDot(eval1(c),l)
+    case CModify(c1,l,c2) if !v(c1) => CModify(eval1(c1),l,c2)
+    case CModify(v1,l,c2) if !v(c2) => CModify(v1,l,eval1(c2))
+    case CVariant(l,c) if !v(c) => CVariant(l,eval1(c))
+    case CSwitch(c,cs) if !v(c) => CSwitch(eval1(c),cs)
 
-  def ev1(c:C):C = {
-    c match {
-    case CApp(CAbs(x,c),v1) if v(v1) => csub(Map(x->v1),c)
+    case CApp(CAbs(x,c),v1) => csub(Map(x->v1),c)
     case CDot(CRecord(vs),CInt(i)) => vs(i-1)
     case CModify(CRecord(vs),CInt(i),v) =>
       def find(hs:List[C],l:Int,ls:List[C]):C = ls match {
-        case List() => CRecord(hs.reverse)
+        case List() => throw new Exception("error")
         case c::ls if l==i => CRecord(hs.reverse:::v::ls)
         case c::ls => find(c::hs,l+1,ls)
       }
@@ -86,19 +70,9 @@ object ics {
     case CSwitch(CVariant(CInt(li),v),ls) => CApp(ls(li-1),v)
     case CLet(x,v,c) => csub(Map(x->v),c)
     case c => throw new Exception("error")
-    }
-  }
-
-  def eval1(c:C):C = try {
-    val (c1,f)=evHole(c)
-    //println("ctx="+c1)
-    f(ev1(c1))
-  } catch {
-    case _:Throwable => ev1(c)
   }
 
   def eval(c:C):C = try {
-    //println(c)
     eval(eval1(c))
   } catch {
     case _:Throwable => c
@@ -110,8 +84,8 @@ object ics {
 
   def kinding(K:Map[σ,k],σ:σ):k = σ match {
     case t if K.contains(t) => K(σ)
-    case trecord(f) => krecord(f)
-    case tvariant(f) => kvariant(f)
+    case TRecord(f) => krecord(f)
+    case TVariant(f) => kvariant(f)
     case _ => U
   }
 
@@ -138,26 +112,26 @@ object ics {
     case kvariant(f) => kvariant(sortf(f))
   }
   def sortσ(σ:σ):(List[(x,k)],σ) = σ match {
-    case ∀(ti,k,t) => val (l,t1) = sortσ(t); (ti->sortk(k)::l,t1)
+    case TAll(ti,k,t) => val (l,t1) = sortσ(t); (ti->sortk(k)::l,t1)
     case t => (List(),t)
   }
 
   def getL(L:List[(x,(x,σ))],σ:σ):(List[(x,(x,σ))],List[x]) = σ match {
-    case idx(li,ti,t) => val ii = fresh(); val (l_,is) = getL(L,t); ((ii->(li,ti))::l_,ii::is)
+    case TIdx(li,ti,t) => val ii = fresh(); val (l_,is) = getL(L,t); ((ii->(li,ti))::l_,ii::is)
     case _ => (L,List())
   }
 
   def addIdx(σ:σ):σ = σ match {
-    case trecord(lts) => trecord(lts.map{case(x,t)=>(x,addIdx(t))})
-    case tvariant(lts) => tvariant(lts.map{case(x,t)=>(x,addIdx(t))})
-    case ∀(_,_,_) =>
+    case TRecord(lts) => TRecord(lts.map{case(x,t)=>(x,addIdx(t))})
+    case TVariant(lts) => TVariant(lts.map{case(x,t)=>(x,addIdx(t))})
+    case TAll(_,_,_) =>
       val (l,t) = sortσ(σ)
       val t2 = l.foldRight(addIdx(t)){
         case((x,U),t)=>t
-        case((x,krecord(f)),t)=> f.foldRight(t){case((li,ti),t1)=>idx(li,tx(x),t1)}
-        case((x,kvariant(f)),t)=> f.foldRight(t){case((li,ti),t1)=>idx(li,tx(x),t1)}
+        case((x,krecord(f)),t)=> f.foldRight(t){case((li,ti),t1)=>TIdx(li,Tx(x),t1)}
+        case((x,kvariant(f)),t)=> f.foldRight(t){case((li,ti),t1)=>TIdx(li,Tx(x),t1)}
       }
-      l.foldRight(t2) {case((t,k),t3)=> ∀(t,k,t3)}
+      l.foldRight(t2) {case((t,k),t3)=> TAll(t,k,t3)}
     case t => t
   }
 
@@ -173,12 +147,12 @@ object ics {
 
   def mks(σ:σ,τs:List[σ]):(Map[x,σ],σ) = (σ,τs) match {
     case (σ,List()) => (Map(),σ)
-    case (∀(t,_,σ),τ::τs) => val(s,σ_) = mks(σ,τs); (s+(t->τ),σ_)
+    case (TAll(t,_,σ),τ::τs) => val(s,σ_) = mks(σ,τs); (s+(t->τ),σ_)
     case (_,_) => throw new Exception("assert mks"+(σ,τs))
   }
 
   def addDot(L:List[(x,(x,σ))],S:Map[x,σ],xi:C,σ:σ):C = σ match {
-    case idx(l,t,t2) => addDot(L,S,CApp(xi,getci(L,l,tsub(S,t))),t2)
+    case TIdx(l,t,t2) => addDot(L,S,CApp(xi,getci(L,l,tsub(S,t))),t2)
     case _ => xi
   }
 

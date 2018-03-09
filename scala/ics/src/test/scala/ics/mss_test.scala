@@ -1,60 +1,10 @@
 package ics
 import org.scalatest.FunSpec
-import mss2._
-import mss2parser.{parseE, parseM, parsek, parseσ}
+import mss._
+import mss_parser.{parseE, parseM, parsek, parseσ}
 
-class mss2_test extends FunSpec {
+class mss_test extends FunSpec {
   def test(a:String,b:Boolean) = it(a) {assert(b)}
-  describe("e") {
-    /*
-    test(i) :- i(1).
-    test(i) :- i(10).
-    test(i) :- i(-10).
-    test(cb) :- cb(-10).
-    test(cb) :- cb(true).
-    test(cb) :- cb(false).
-    test(x) :- x(x).
-    test(x) :- \+x(true).
-    test(x) :- \+x(1).
-    test(e_xcb) :- e(1),e(true),e(xxx).
-    test(e_λ) :- e(λ(x,x)).
-    test(e_app) :- e(λ(x,x)$1).
-    %test(e_kapp) :- e(λ(x::u,x)!int).
-    test(e_record) :- e([x=1,y=2]).
-    test(e_record) :- e([x=1,y=2]#x).
-    test(e_record) :- e(modify([x=1,y=2],x,2)).
-    test(e_variant) :- e({[eint=1]}).
-    test(e_variant) :- e(case({[eint=1]},{[eint=λ(x,x),eadd=λ(x,add$x#'1'$x#'2')]})),!.
-    */
-  }
-  describe("q1") {
-    /*
-    test(x) :- q(x).
-    test(b) :- q(int).
-    test(fun) :- q(int->int).
-    test(empty_record):- q([]).
-    test(one_element_record):- q([a:int]).
-    test(three_elements_record):- q([a:int,b:int,c:bool]).
-    test(nested_record):- q([a:int,b:[a:int,c:bool]]).
-    test(variant):- q({[eint:int,eadd:['1':e,'2':e]]}).
-    */
-  }
-  describe("k") {
-    /*
-    test(k):- k(u).
-    test(k):- k([]).
-    test(k):- k([l:int]).
-    test(k):- k({[eint:int,eadd:['1':int,'2':int],emul:['1':int,'2':int]]}),!.
-    */
-  }
-  describe("q2") {
-    /*
-    test(q):- q(∀(t,u,t)).
-    test(q):- q(∀(t,[a:int,b:int],t)).
-    test(q):- q(∀(t,{[a:t,b:t]},{[a:t,b:t,c:int]})),!.
-    test(q):- q(∀(t,[a:t,b:t],[a:t,b:t,c:int])).
-    */
-  }
   describe("esub") {
     it("cb") {
       assertResult(esub(Map("x"->Ex("y")),parseE("1")))(parseE("1"))
@@ -118,39 +68,14 @@ class mss2_test extends FunSpec {
   }
   describe("eftv") {
     it("a") {
-      assertResult(eftv(Map(tx("t1")->U,tx("t2")->parsek("{{l:t1}}")),parseσ("t1")))(Set("t1"))
-      assertResult(eftv(Map(tx("t1")->U,tx("t2")->parsek("{{l:t1}}")),parseσ("t2")))(Set("t2","t1"))
+      assertResult(eftv(Map(Tx("t1")->U,Tx("t2")->parsek("{{l:t1}}")),parseσ("t1")))(Set("t1"))
+      assertResult(eftv(Map(Tx("t1")->U,Tx("t2")->parsek("{{l:t1}}")),parseσ("t2")))(Set("t2","t1"))
     }
   }
   describe("cls") {
     /*
     test(a) :- cls([t1 : u, t2 : [l:t1]],[],t1,R),!,R=([t2:[l:t1]],∀(t1,u,t1)).
     test(a) :- cls([t1 : u, t2 : [l:t1]],[],t2,R),!,R=([],∀(t1,u,∀(t2,[l:t1],t2))).
-    */
-  }
-  describe("M") {
-    test("int",M(MInt(10)))
-    /*
-    test("true",M(true))
-    test("false",M(false))
-    test("λ",M(λ(x:'%x0',x)))
-    test("app",M(λ(x:int,x)$1))
-    %test("app",test("λ(t::u,λ(x:t,x)) , Q),!,Q= ∀(t,u,(t->t)))
-    %test("tapp",test("(λ(t::u,λ(x:t,x)) ! int), Q),!,Q=(int->int))
-    test("record",'M'([x=1,y=2]))
-    test("record",'M'(([x=1,y=2]:[x:int,y:int])#x))
-    test("record",'M'(([x=1,y=2]:[x:int,y:int])#y))
-    test("record",'M'(([x=λ(x:int,x)$1,y=2]:[x:int,y:int])#x))
-    test("record",'M'(modify([x=1,y=2]:[x:int,y:int],x,2)))
-    test("record",'M'(λ(z:int,[y=z])$10))
-    test("record",'M'(modify((λ(z:int,[x=1,y=z])$10):[x:int,y:int],x,2)))
-    test("variant",'M'({[eint=1]}:'%x0'))
-    test("variant",'M'(case({[eint=1]}:{[eint:int]},{[eint=λ(x:int,x)]})),!)
-    test("variant",'M'(case(λ(z:int,{[eint=z]}:{[eint:int]})$1,{[eint=λ(x:int,x)]})),!)
-    test("variant",'M'(case(λ(z:int,{[eint=z]}:{[eint:int,b:int]})$1,{[eint=λ(x:int,x),b=λ(x:int,x)]})),!)
-    test("let",'M'((let(x:int=poly(1:int));x)))
-    test("let",'M'((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));id!'%x1')))
-    test("let",'M'((let(id: ∀('%x0',u,('%x0'->'%x0'))=poly(λ(x:'%x0',x): ∀('%x0',u,('%x0'->'%x0'))));id!int$1)))
     */
   }
   describe("typing") {
@@ -203,7 +128,7 @@ class mss2_test extends FunSpec {
       "λz.z#a",
       "λz:x2.z:x2#a",
       "∀x1::U.∀x2::{{a:x1}}.x2->x1",
-      Map(tx("x1")->U,tx("x2")->parsek("{{a:x1}}"))) }
+      Map(Tx("x1")->U,Tx("x2")->parsek("{{a:x1}}"))) }
     it("record8") { test(
       "modify((λz.{x=1,y=z}) 10,x,2)",
       "modify((λz:int.{x=1,y=z}) 10:{x:int,y:int},x,2)",
@@ -221,7 +146,7 @@ class mss2_test extends FunSpec {
     it("variant") { tesk("<eint=1>",
       "<eint=1>:x0",
       "∀x0::<<eint:int>>.x0",
-      Map(tx("x0") -> parsek("<<eint:int>>"))) }
+      Map(Tx("x0") -> parsek("<<eint:int>>"))) }
     it("variant2") { test(
       "case <eint=1> of <eint=λx.x>",
       "case <eint=1>:<eint:int> of <eint=λx:int.x>",
@@ -252,7 +177,7 @@ Expected MCase(MVariant(x,MRecord(List((a,MInt(1)))),tvariant(List((x,trecord(Li
       "let id=λx.x in id",
       "let id: ∀x0::U.x0->x0=Poly(λx:x0.x : ∀x0::U.x0->x0) in id!x1",
       "∀x1::U.x1->x1",
-      Map(tx("x1")->U)) }
+      Map(Tx("x1")->U)) }
     it("let3") { test(
       "let id=λx.x in id 1",
       "let id:∀x0::U.x0->x0=Poly(λx:x0.x : ∀x0::U.x0->x0) in (id!int) 1",
@@ -269,7 +194,7 @@ Expected MCase(MVariant(x,MRecord(List((a,MInt(1)))),tvariant(List((x,trecord(Li
         |  = Poly(λx:x2.x:x2#a : ∀x1::U.∀x2::{{a:x1}}.x2->x1)
         |                in id!x3!x4""".stripMargin,
       "∀x4::{{a:x3}}.∀x3::U.x4->x3",
-      Map(tx("x3")->U,tx("x4")->parsek("{{a:x3}}"))) }
+      Map(Tx("x3")->U,Tx("x4")->parsek("{{a:x3}}"))) }
     it("let_poly2") { test(
       """let id=λx.x#a in id {a=10,b=20}""",
       """let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1

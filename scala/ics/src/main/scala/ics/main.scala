@@ -3,11 +3,11 @@ package ics
 object main extends App {
   def run(src:String) {
     println("============")
-    mss2.reset()
-    val e = mss2parser.parseE(src)
-    val (k,s,m,t) = mss2.wk(Map(),Map(),e)
-    val (k1,t1) = mss2.cls(k,s,t)
-    val m_ = mss2.mtsub(s,m)
+    mss.reset()
+    val e = mss_parser.parseE(src)
+    val (k,s,m,t) = mss.wk(Map(),Map(),e)
+    val (k1,t1) = mss.cls(k,s,t)
+    val m_ = mss.mtsub(s,m)
     println(e)
     println(m_)
     println("k="+k+ " lk="+ics.lk(k))

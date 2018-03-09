@@ -1,13 +1,13 @@
 package ics
 import org.scalatest.FunSpec
-import mss2.{t,tx,tarr,M,Mx,MAbs,reset,x,k,U,σ}
+import mss._
 import ics._
-import mss2parser.{parsek,parseM}
-import ics_parser.{parseσ,parseC}
+import mss_parser.{parseσ,parsek,parseM}
+import ics_parser.{parseC}
 
 class ics_test extends FunSpec {
   def test(a:String,b:Boolean) = it(a) {assert(b)}
-  describe("parseC") {
+  describe("parse C") {
     it("i") {
       assertResult(CInt(1))(parseC("1"))
       assertResult(CInt(10))(parseC("10"))
@@ -65,30 +65,6 @@ class ics_test extends FunSpec {
         parseC("let id= λx.x in id 1"))
     }
   }
-  describe("e") {
-    /*
-    test(i) :- i(1).
-    test(i) :- i(10).
-    test(i) :- i(-10).
-    test(cb) :- cb(-10).
-    test(cb) :- cb(true).
-    test(cb) :- cb(false).
-    test(x) :- x(x).
-    test(x) :- \+x(true).
-    test(x) :- \+x(1).
-
-    test(c_xcb) :- 'C'(1),'C'(true),'C'(xxx).
-    test(c_λ) :- 'C'(λ(x,x)).
-    test(c_app) :- 'C'(λ(x,x)$1).
-    test(c_λ) :- 'C'(λI(i,i)).
-    test(c_record) :- 'C'([1,2]).
-    test(c_record) :- 'C'([1,2]#[i]).
-    test(c_record) :- 'C'([1,2]#[1]).
-    test(c_record) :- 'C'(modify([1,2],1,2)).
-    test(c_variant) :- 'C'({[1=1]}).
-    test(c_variant) :- 'C'(switch(1,[λ(x,x),λ(x,add$x#[1]$x#[2])])),!.
-    */
-  }
 
   describe("csub") {
     it("cb") {
@@ -112,75 +88,42 @@ class ics_test extends FunSpec {
 
   describe("eval") {
     it("λ") {
-      assertResult(parseC("1"))(eval(parseC("(λx.x) 1")))
-      assertResult(parseC("10"))(eval(parseC("(λz.z) ((λx.x) 10)")))
+      assertResult(parseC("1"))(ics.eval(parseC("(λx.x) 1")))
+      assertResult(parseC("10"))(ics.eval(parseC("(λz.z) ((λx.x) 10)")))
     }
     it("record") {
-      assertResult(parseC("10"))(eval(parseC("{10,20}[1]")))
-      assertResult(parseC("20"))(eval(parseC("{10,20}[2]")))
-      assertResult(parseC("11"))(eval(parseC("{(λx.x) 11,2}[1]")))
-      assertResult(parseC("22"))(eval(parseC("{(λx.x) 11,(λy.y) 22}[2]")))
+      assertResult(parseC("10"))(ics.eval(parseC("{10,20}[1]")))
+      assertResult(parseC("20"))(ics.eval(parseC("{10,20}[2]")))
+      assertResult(parseC("11"))(ics.eval(parseC("{(λx.x) 11,2}[1]")))
+      assertResult(parseC("22"))(ics.eval(parseC("{(λx.x) 11,(λy.y) 22}[2]")))
     }
     it("record modify") {
       assertResult(parseC("{10,22}"))(
-        eval(parseC("modify({11,22},1,10)")))
+        ics.eval(parseC("modify({11,22},1,10)")))
       assertResult(parseC("{11,10}"))(
-        eval(parseC("modify({11,22},2,10)")))
+        ics.eval(parseC("modify({11,22},2,10)")))
     }
     it("record app") {
       assertResult(parseC("{10}"))(
-        eval(parseC("(λz.{z}) 10")))
+        ics.eval(parseC("(λz.{z}) 10")))
     }
     it("record4") {
       assertResult(parseC("{11,10}"))(
-        eval(parseC("(λz.{11,z}) ((λx.x) 10)")))
+        ics.eval(parseC("(λz.{11,z}) ((λx.x) 10)")))
       assertResult(parseC("{22,10}"))(
-        eval(parseC("modify((λz.{11,z}) 10,1,22)")))
+        ics.eval(parseC("modify((λz.{11,z}) 10,1,22)")))
     }
     it("variant") {
-      assertResult(parseC("<1=1>"))(eval(parseC("<1=1>")))
+      assertResult(parseC("<1=1>"))(ics.eval(parseC("<1=1>")))
     }
     it("variant2") {
       assertResult(parseC("1"))(
-        eval(parseC("switch (λz.<1=z>) 1 of λx.x,λx.add x[1] x[2]")))
+        ics.eval(parseC("switch (λz.<1=z>) 1 of λx.x,λx.add x[1] x[2]")))
     }
     it("variant3") {
       assertResult(parseC("{10,1}"))(
-        eval(parseC("switch (λz.<2={z,10}>) 1 of λx.x,λx.{x[2],x[1]}")))
+        ics.eval(parseC("switch (λz.<2={z,10}>) 1 of λx.x,λx.{x[2],x[1]}")))
     }
-  }
-
-  describe("τ") {
-    /*
-    test(x) :- τ(x).
-    test(b) :- τ(int).
-    test(fun) :- τ(int->int).
-    test(empty_record):- τ([]).
-    test(one_element_record):- τ([a:int]).
-    test(three_elements_record):- τ([a:int,b:int,c:bool]).
-    test(nested_record):- τ([a:int,b:[a:int,c:bool]]).
-    test(variant):- τ({[eint:int,eadd:['1':e,'2':e]]}).
-    test(idx) :- τ(idx(a,x,int)). % todo
-    */
-  }
-
-  describe("k") {
-    /*
-    test(k):- k(u).
-    test(k):- k([]).
-    test(k):- k([l:int]).
-    test(k):- k({[eint:int,eadd:['1':int,'2':int],emul:['1':int,'2':int]]}),!.
-    */
-  }
-
-  describe("σ") {
-    /*
-    test(σ):- σ(∀(t,u,t)).
-    test(σ):- σ(∀(t,[a:int,b:int],t)).
-    test(σ):- σ(∀(t,{[a:t,b:t]},{[a:t,b:t,c:int]})),!.
-    test(σ):- σ(∀(t,[a:t,b:t],[a:t,b:t,c:int])).
-    test(fun) :- σ(int->int).
-    */
   }
 
   describe("kinding") {
@@ -211,9 +154,9 @@ class ics_test extends FunSpec {
   describe("xts") {
     it("abc") { assertResult(parseM("a!b!c"))(parseM("(a!b)!c")) }
     it("xts_a") { assertResult(xts(parseM("a"),List()))((Mx("a"),List())) }
-    it("xts_ab") { assertResult(xts(parseM("a!b"),List()))((Mx("a"),List(tx("b")))) }
-    it("xts_abc") { assertResult(xts(parseM("a!b!c"),List()))((Mx("a"),List(tx("b"),tx("c")))) }
-    it("xts_abcd") { assertResult(xts(parseM("a!b!c!d"),List()))((Mx("a"),List(tx("b"),tx("c"),tx("d")))) }
+    it("xts_ab") { assertResult(xts(parseM("a!b"),List()))((Mx("a"),List(Tx("b")))) }
+    it("xts_abc") { assertResult(xts(parseM("a!b!c"),List()))((Mx("a"),List(Tx("b"),Tx("c")))) }
+    it("xts_abcd") { assertResult(xts(parseM("a!b!c!d"),List()))((Mx("a"),List(Tx("b"),Tx("c"),Tx("d")))) }
   }
 
   describe("*") {
@@ -221,24 +164,24 @@ class ics_test extends FunSpec {
       (List("t2"->parsek("{{a:bool,b:int}}"),"t3"->parsek("{{a:t2}}")),parseσ("t2->t3"))) }
     it("rep") { assertResult(
       addIdx(parseσ("∀t2::{{b:int,a:bool}}.∀t3::{{a:t2}}.t2->t3")))(
-          parseσ("∀t2::{{a:bool,b:int}}.∀t3::{{a:t2}}.idx(a,t2)=>idx(b,t2)=>idx(a,t3)=>t2->t3")) }
+             parseσ("∀t2::{{a:bool,b:int}}.∀t3::{{a:t2}}.idx(a,t2)=>idx(b,t2)=>idx(a,t3)=>t2->t3")) }
     it("rep2") { assertResult(addIdx(parseσ("∀x2::{{a:x1}}.x2->x1")))(
-                                  parseσ("∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
+                                     parseσ("∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
     it("rep3") { assertResult(addIdx(parseσ("∀x1::U.∀x2::{{a:x1}}.x2->x1")))(
-                                  parseσ("∀x1::U.∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
+                                     parseσ("∀x1::U.∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
     it("rep4") { assertResult(addIdx(parseσ("∀x2::{{a:x1}}.x2->x1")))(
-                                  parseσ("∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
+                                     parseσ("∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
     it("rep5") { assertResult(addIdx(parseσ("∀x1::U.∀x2::{{a:x1}}.x2->x1")))(
-                                  parseσ("∀x1::U.∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
+                                     parseσ("∀x1::U.∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
     it("getL1") {
       reset()
       assertResult(getL(List(),parseσ("idx(b,bt)=>c")))(
-        (List("x0"->("b",tx("bt"))),List("x0")))
+        (List("x0"->("b",Tx("bt"))),List("x0")))
     }
     it("getL2") {
       reset()
       assertResult(getL(List(),parseσ("idx(a,at)=>idx(b,bt)=>c")))(
-        (List("x0"->("a",tx("at")),"x1"->("b",tx("bt"))),List("x0","x1")))
+        (List("x0"->("a",Tx("at")),"x1"->("b",Tx("bt"))),List("x0","x1")))
     }
     it("addλ") {
       assertResult(addλ(List("a","b","c","d"),Cx("t")))(
@@ -247,17 +190,15 @@ class ics_test extends FunSpec {
 
 
   describe("compile") {
-    //test(_,M,_,R) :- c([],[],M,R),!.
     def test(e:x,m:x,t:x,cx:x) {
       assertResult(parseC(cx))(c(List(),Map(),parseM(m)))
     }
-    //test(_,M,_,K,R) :- lk(K,LK),c(LK,[],M,R1),!,R=R1.
     def tesk(e:x,m:x,t:x,K:Map[σ,k],cx:x) {
       assertResult(parseC(cx))(c(lk(K),Map(),parseM(m)))
     }
-    it("int")   { test("10",   "10"   ,"int" ,"10") }
-    it("true")  { test("true", "true" ,"bool","true") }
-    it("false") { test("false","false","bool","false") }
+    it("int")      { test("10",   "10"   ,"int" ,"10") }
+    it("true")     { test("true", "true" ,"bool","true") }
+    it("false")    { test("false","false","bool","false") }
     it("λ")        { test("λ(x,x)",
                           "λx:x0.x", "∀x0::U.x0->x0",
                           "λx.x") }
@@ -285,14 +226,14 @@ class ics_test extends FunSpec {
     it("record7")  { reset(2)
                      tesk("λz.z#a",
                           "λz:x2.z:x2#a","∀x1::U.∀x2::{{a:x1}}.x2->x1",
-                          Map(tx("x1")->U,tx("x2")->parsek("{{a:x1}}")),
+                          Map(Tx("x1")->U,Tx("x2")->parsek("{{a:x1}}")),
                           "λz.z[x2]") }
     it("record8")  { test("modify((λz.{x=1,y=z}) 10,x,2)",
                           "modify((λz:int.{x=1,y=z}) 10:{x:int,y:int},x,2)","{x:int,y:int}",
                           "modify((λz.{1,z}) 10,1,2)") }
     it("variant")  { reset(3);tesk("<eint=1>",
                           "(<eint=1>:x0)","∀(x0,<eint:int>,x0)",
-                          Map(tx("x0")->parsek("<<eint:int>>")),
+                          Map(Tx("x0")->parsek("<<eint:int>>")),
                           "<x3=1>") }
     it("variant2") { test("case<eint=1>of<eint=λx.x>",
                           "case<eint=1>:<eint:int>of<eint=λx:int.x>","int",
@@ -310,7 +251,7 @@ class ics_test extends FunSpec {
       tesk("let id=λx.x));id",
          """let id:∀x0::U.x0->x0
                   =Poly(λx:x0.x : ∀x0::U.x0->x0) in id!x1""", "∀x1::U.x1->x1",
-            Map(tx("x1")->U),
+            Map(Tx("x1")->U),
            "let id=λx.x in id") }
     it("let3") {
       test("let id=λx.x in id 1",
@@ -329,7 +270,7 @@ class ics_test extends FunSpec {
          """let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
                     =Poly(λx:x2.x:x2#a: ∀x1::U.∀x2::{{a:x1}}.x2->x1) in
                     id!x3!x4""", "∀x3::U.∀x4::{{a:x3}}.x4->x3",
-            Map(tx("x3")->U,tx("x4")->parsek("{{a:x3}}")),
+            Map(Tx("x3")->U,Tx("x4")->parsek("{{a:x3}}")),
            "let id=λx6.λx.x[x6] in id x5") }
     it("let_poly2") {
       reset(3)
