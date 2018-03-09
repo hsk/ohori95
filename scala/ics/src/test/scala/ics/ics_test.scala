@@ -303,15 +303,15 @@ class ics_test extends FunSpec {
     it("variant4") { test("case(λz.<eint=z>) 1 of<eint=λx.x,b=λx.x>",
                           "case(λz:int.<eint=z>:<eint:int,b:int>) 1 of<eint=λx:int.x,b=λx:int.x>","int",
                           "switch(λz.<1=z>) 1 of λx.x,λx.x") }
-    it("let")   { test("let x=1 in x",
-                    "let x:int=Poly(1:int) in x","int",
-                    "let x=1 in x") }
-    it("let2") { tesk("let id=λx.x));id",
-                    """let id:∀x0::U.x0->x0
-                            =Poly(λx:x0.x : ∀x0::U.x0->x0) in id!x1""",
-                    "∀x1::U.x1->x1",
-                    Map(tx("x1")->U),
-                    "let id=λx.x in id") }
+    it("let")      { test("let x=1 in x",
+                          "let x:int=Poly(1:int) in x","int",
+                          "let x=1 in x") }
+    it("let2") {
+      tesk("let id=λx.x));id",
+         """let id:∀x0::U.x0->x0
+                  =Poly(λx:x0.x : ∀x0::U.x0->x0) in id!x1""", "∀x1::U.x1->x1",
+            Map(tx("x1")->U),
+           "let id=λx.x in id") }
     it("let3") {
       test("let id=λx.x in id 1",
          """let id:∀x0::U.x0->x0
@@ -320,8 +320,8 @@ class ics_test extends FunSpec {
     it("let4") {
       test("let id=λx.λy.x in id 1 2",
          """let id: ∀x1::U.∀x0::U.x0->x1->x0
-                            = Poly(λx:x0.λy:x1.x : ∀x1::U.∀x0::U.x0->x1->x0) in
-                            (id!int!int) 1 2""","int",
+                  = Poly(λx:x0.λy:x1.x : ∀x1::U.∀x0::U.x0->x1->x0) in
+                  (id!int!int) 1 2""","int",
            "let id=λx.λy.x in id 1 2") }
     it("let_poly") {
       reset(5)
@@ -329,15 +329,15 @@ class ics_test extends FunSpec {
          """let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
                     =Poly(λx:x2.x:x2#a: ∀x1::U.∀x2::{{a:x1}}.x2->x1) in
                     id!x3!x4""", "∀x3::U.∀x4::{{a:x3}}.x4->x3",
-           Map(tx("x3")->U,tx("x4")->parsek("{{a:x3}}")),
+            Map(tx("x3")->U,tx("x4")->parsek("{{a:x3}}")),
            "let id=λx6.λx.x[x6] in id x5") }
     it("let_poly2") {
       reset(3)
-        test("let id=λx.x#a in id {a=10,b=20}",
-       """let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
-                    =Poly(λx:x2.x:x2#a: ∀x1::U.∀x2::{{a:x1}}.x2->x1) in
-                    id!int!{a:int,b:int} {a=10,b=20}""","int",
-            "let id=λx3.λx.x[x3] in id 1 {10,20}") }
+      test("let id=λx.x#a in id {a=10,b=20}",
+         """let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
+                  =Poly(λx:x2.x:x2#a: ∀x1::U.∀x2::{{a:x1}}.x2->x1) in
+                  id!int!{a:int,b:int} {a=10,b=20}""","int",
+           "let id=λx3.λx.x[x3] in id 1 {10,20}") }
     it("test end") {
       reset()
     }

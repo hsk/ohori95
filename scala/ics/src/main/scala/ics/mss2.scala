@@ -332,7 +332,6 @@ object mss2 {
           val Si = fresht()
           val (x_,q_,ks_,s_) = foldxq(K,MTApp(x,Si),q,Ks,S)
           (x_,q_,ks_ +(Si->k),s_ +(t_ -> Si))
-        //case tx(x1) if K.contains(q) && K(q) != U => foldxq(K-q,x,∀(x1,K(q),q),Ks,S)
         case q => (x,q,Ks,S)
       }
       val (x_,sτ1,sKs,s)=foldxq(K,Mx(x),T(x),Map(),Map())

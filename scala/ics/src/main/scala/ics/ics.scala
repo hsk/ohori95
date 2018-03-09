@@ -55,8 +55,7 @@ object ics {
     case CRecord(cs) =>
       def find(hs:List[C],ls:List[C]):(C,C=>C) = ls match {
         case List() => (c,{c=>c})
-        case c::ls if !v(c) =>
-          evHole(c)match{case (c,h)=>(c,{c=>CRecord(hs.reverse:::h(c)::ls)})}
+        case c::ls if !v(c) => val (c1,h) = evHole(c); (c1,{c=>CRecord(hs.reverse:::h(c)::ls)})
         case c::ls => find(c::hs,ls)
       }
       find(List(),cs)
@@ -92,14 +91,14 @@ object ics {
 
   def eval1(c:C):C = try {
     val (c1,f)=evHole(c)
-    println("ctx="+c1)
+    //println("ctx="+c1)
     f(ev1(c1))
   } catch {
     case _:Throwable => ev1(c)
   }
 
   def eval(c:C):C = try {
-    println(c)
+    //println(c)
     eval(eval1(c))
   } catch {
     case _:Throwable => c
@@ -185,7 +184,7 @@ object ics {
 
   def c(L:List[(x,(x,σ))],T:Map[x,σ],M:M):C = M match {
     case Mx(x) => Cx(x)
-    case MTApp(_,_) => val (Mx(x),τs) = xts(M,List()); println("M="+M+" t(x)="+T(x)+" τs="+τs); val (s,σ_) = mks(T(x),τs); addDot(L,s,Cx(x),σ_)
+    case MTApp(_,_) => val (Mx(x),τs) = xts(M,List()); val (s,σ_) = mks(T(x),τs); addDot(L,s,Cx(x),σ_)
     case MTrue => CTrue
     case MFalse => CFalse
     case MInt(i) => CInt(i)
