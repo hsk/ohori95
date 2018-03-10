@@ -1,8 +1,8 @@
 package ics
 import org.scalatest.FunSpec
-import mss._
+import tmss._
 import ics._
-import mss_parser.{parseσ,parsek,parseM}
+import tmss_parser.{parseσ,parsek,parseM}
 import ics_parser.{parseC}
 
 class ics_test extends FunSpec {
@@ -152,7 +152,7 @@ class ics_test extends FunSpec {
   }
 
   describe("*") {
-    it("getT") { assertResult(sortσ(parseσ("∀t2::{{b:int,a:bool}}.∀t3::{{a:t2}}.t2->t3")))(
+    it("getT") { assertResult(sortq(parseσ("∀t2::{{b:int,a:bool}}.∀t3::{{a:t2}}.t2->t3")))(
       (List("t2"->parsek("{{a:bool,b:int}}"),"t3"->parsek("{{a:t2}}")),parseσ("t2->t3"))) }
     it("rep") { assertResult(
       addIdx(parseσ("∀t2::{{b:int,a:bool}}.∀t3::{{a:t2}}.t2->t3")))(
@@ -167,12 +167,11 @@ class ics_test extends FunSpec {
                                      parseσ("∀x1::U.∀x2::{{a:x1}}.idx(a,x2)=>x2->x1")) }
   }
 
-
   describe("compile") {
     def test(e:x,m:x,t:x,cx:x) {
       assertResult(parseC(cx))(c(List(),Map(),parseM(m)))
     }
-    def tesk(e:x,m:x,t:x,K:Map[σ,k],cx:x) {
+    def tesk(e:x, m:x, t:x, K:Map[q,k], cx:x) {
       assertResult(parseC(cx))(c(lk(K),Map(),parseM(m)))
     }
     it("int")      { test("10",   "10"   ,"int" ,"10") }

@@ -3,11 +3,11 @@ package ics
 object main extends App {
   def run(src:String) {
     println("============")
-    mss.reset()
+    tmss.reset()
     val e = mss_parser.parseE(src)
-    val (k,s,m,t) = mss.wk(Map(),Map(),e)
-    val (k1,t1) = mss.cls(k,s,t)
-    val m_ = mss.mtsub(s,m)
+    val (k,s,m,t) = tmss.wk(Map(),Map(),e)
+    val (k1,t1) = tmss.cls(k,s,t)
+    val m_ = tmss.mtsub(s,m)
     println(e)
     println(m_)
     println("k="+k+ " lk="+ics.lk(k))
@@ -30,4 +30,6 @@ object main extends App {
   run("let f= λa.λb.λc.modify(modify(a,x,b),z,c) in {aa=f {z=5,x=1} 10 20,bb=f{z=0,x=1,y=5}10 20}")
   run("<x={a=1,b=2}>")
   run("case <x={a=1}> of <x=λy.y#a>") // todo add test
+  run("(λv.case v of <x=λy.y#a>) <x={a=1}>") // todo add test
+  run("let f=λv.case v of <x=λy.y#c> in f <x={b=2,c=1}>") // todo add test
 }

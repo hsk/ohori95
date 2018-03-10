@@ -15,7 +15,7 @@ object ics_parser extends RegexParsers {
   def Ï   = (i                                 ^^ {case i=>i}).
           | (x                                 ^^ {case x=>Cx(x)})
 
-  def c   : Parser[C]
+  def c   : Parser[c]
           = (rep1(c1)                          ^^ {case cs=>cs.reduceLeft{CApp}})
   def c1  = (c2 ~ rep("["~> Ï <~"]")           ^^ {case c~ls=>ls.foldLeft(c){CDot}})
   def c2  = (x                                 ^^ {Cx(_)}).
@@ -28,7 +28,7 @@ object ics_parser extends RegexParsers {
           | ("let"~>x~"="~c~"in"~c             ^^ {case x~_~c~_~c2=>CLet(x,c,c2)}).
           | ("("~>c<~")"                       ^^ {case c=>c})
 
-  def parseC(s:String):C = {
+  def parseC(s:String):c = {
     parseAll(c, s) match {
       case Success(d, r) => d
       case e => throw new Exception(e.toString)

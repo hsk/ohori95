@@ -2,23 +2,128 @@
 package ics
 
 object ics {
-  import mss._
+  import tmss._
 
-  trait C
-  case object CTrue extends C
-  case object CFalse extends C
-  case class CInt(v:Int) extends C
-  case class Cx(v:x) extends C
-  case class CAbs(x:x,C:C) extends C
-  case class CApp(c1:C,c2:C) extends C
-  case class CLet(x:x,c1:C,c2:C) extends C
-  case class CRecord(f:List[C]) extends C
-  case class CDot(C:C,l:C) extends C
-  case class CModify(C:C,l:C,C2:C) extends C
-  case class CVariant(l:C,C:C) extends C
-  case class CSwitch(C:C,w:List[C]) extends C
+  sealed trait c
+  case object CTrue extends c
+  case object CFalse extends c
+  case class CInt(v:Int) extends c
+  case class Cx(v:x) extends c
+  case class CAbs(x:x, c:c) extends c
+  case class CApp(c1:c, c2:c) extends c
+  case class CLet(x:x, c1:c, c2:c) extends c
+  case class CRecord(f:List[c]) extends c
+  case class CDot(c:c, l:c) extends c
+  case class CModify(c:c, l:c, c2:c) extends c
+  case class CVariant(l:c, c:c) extends c
+  case class CSwitch(c:c, w:List[c]) extends c
 
-  def v(c:C):Boolean = c match {
+  // ------------------------------
+  // compiler
+  // ------------------------------
+
+  def kinding(eK:Map[q,k], q:q):k = q match {
+    case q if eK.contains(q) => eK(q)
+    case TRecord(f) => KRecord(f)
+    case TVariant(f) => KVariant(f)
+    case _ => U
+  }
+
+  def idxSet(t:q, k:k):Set[(x,q)] = k match {
+    case U => Set()
+    case KRecord(f) => f.map{case(l,_)=>(l,t)}.toSet
+    case KVariant(f) => f.map{case(l,_)=>(l,t)}.toSet
+  }
+  /*
+  def idxSet1(q:q):Set[(x,q)] = q match {
+    case ∀(x,k,t) => idxSet(tx(x),k) ++ idxSet(t)
+    case _ => Set()
+  }
+  */
+  def idxSetK(eK:Map[q,k]):Set[(x,q)] =
+    eK.foldLeft(Set[(x,q)]()) {
+      case (is1,(t,k)) => is1 ++ idxSet(t,k)
+    }
+
+  def sortf(f:List[(x,q)]):List[(x,q)] = f.sortWith{case((l1,_),(l2,_))=>l1<l2}
+  def sortk(k:k):k = k match {
+    case U => U
+    case KRecord(f) => KRecord(sortf(f))
+    case KVariant(f) => KVariant(sortf(f))
+  }
+  def sortq(q:q):(List[(x,k)],q) = q match {
+    case TAll(ti,k,t) => val (l,t1) = sortq(t); (ti->sortk(k)::l,t1)
+    case t => (List(),t)
+  }
+
+  def addIdx(q:q):q = q match {
+    case TRecord(lts) => TRecord(lts.map{case(x,t)=>(x,addIdx(t))})
+    case TVariant(lts) => TVariant(lts.map{case(x,t)=>(x,addIdx(t))})
+    case TAll(_,_,_) =>
+      val (l,t) = sortq(q)
+      val t2 = l.foldRight(addIdx(t)){
+        case((x,U),t)=>t
+        case((x,KRecord(f)),t)=> f.foldRight(t){case((li,ti),t1)=>TIdx(li,Tx(x),t1)}
+        case((x,KVariant(f)),t)=> f.foldRight(t){case((li,ti),t1)=>TIdx(li,Tx(x),t1)}
+      }
+      l.foldRight(t2) {case((t,k),t3)=> TAll(t,k,t3)}
+    case t => t
+  }
+
+  def getci(eL:List[(x,(x,q))], l:x, t:q):c = {
+    val idxs = idxSet(t, kinding(Map(), t)).toList.zipWithIndex
+    idxs.find { case ((l1, t1), i) => l == l1 && t == t1 } match {
+      case Some((_, i)) => CInt(i + 1)
+      case None =>
+        eL.find { case (x, (l1, t1)) => l == l1 && t == t1 } match {
+          case Some((x, _)) => Cx(x)
+          case None => throw new Exception("assert find index")
+        }
+    }
+  }
+
+  def c(eL:List[(x,(x,q))], eT:Map[x,q], m:m):c = m match {
+    case Mx(x) => Cx(x)
+    case MTApp(Mx(x),ts) =>
+      def stripq(ts:List[q], q:q):(Map[x,q],q) = (ts,q) match {
+        case (List(),q) => (Map(),q)
+        case (t::ts,TAll(x,_,q)) => val(s,q_) = stripq(ts,q); (s+(x->t),q_)
+        case (_,_) => throw new Exception("assert stripq"+(q,ts))
+      }
+      def addApp(eL:List[(x,(x,q))], s:Map[x,q], q:q, c:c):c = q match {
+        case TIdx(l,t,t2) => addApp(eL,s,t2,CApp(c,getci(eL,l,tsub(s,t))))
+        case _ => c
+      }
+      val (s,t) = stripq(ts,eT(x)); addApp(eL,s,t,Cx(x))
+    case MTrue => CTrue
+    case MFalse => CFalse
+    case MInt(i) => CInt(i)
+    case MAbs(x,t,m) => CAbs(x,c(eL,eT+(x->t),m))
+    case MApp(m1,m2) => CApp(c(eL,eT,m1),c(eL,eT,m2))
+    case MRecord(f) => CRecord(f.map{case(_,m) => c(eL,eT,m)})
+    case MDot(m1,t,l) => CDot(c(eL,eT,m1),getci(eL,l,t))
+    case MModify(m1,t,l,m2) => val c1 = c(eL,eT,m1); CModify(c1,getci(eL,l,t),c(eL,eT,m2))
+    case MVariant(l,m,t) => CVariant(getci(eL,l,t),c(eL,eT,m))
+    case MCase(m,f) => CSwitch(c(eL,eT,m),f.map{case(li,mi)=>c(eL,eT,mi)})
+    case MPoly(m1,t) =>
+      def getL(eL:List[(x,(x,q))], q:q):(List[(x,(x,q))],List[x]) = q match {
+        case TIdx(l,ti,t) => val x = fresh(); val (eL_,is) = getL(eL,t); ((x->(l,ti))::eL_,x::is)
+        case _ => (eL,List())
+      }
+      val (_,idxs) = sortq(addIdx(t))
+      val (eL_,is) = getL(eL,idxs)
+      is.foldRight(c(eL_,eT,m1)){(x,c)=>CAbs(x,c)}
+    case MLet(x,q,m1,m2) => CLet(x,c(eL,eT,m1),c(eL,eT+(x->addIdx(q)),m2))
+  }
+
+  def lk(eK:Map[q,k]):List[(x,(x,q))] =
+    idxSetK(eK).toList.map{case(l,t)=>(fresh(),(l,t))}
+
+  // ------------------------------
+  // evaluator
+  // ------------------------------
+
+  def v(c:c):Boolean = c match {
     case CInt(_) => true
     case CTrue => true
     case CFalse => true
@@ -28,25 +133,25 @@ object ics {
     case _ => false
   }
 
-  def csub(S:Map[x,C],c:C):C = c match {
-    case Cx(x) if S.contains(x) => csub(S,S(x))
-    case CAbs(x,c) => CAbs(x,csub(S - x,c))
-    case CApp(c1,c2) => CApp(csub(S,c1),csub(S,c2))
-    case CRecord(cs) => CRecord(cs.map{(c)=>csub(S,c)})
-    case CDot(c,l) => CDot(csub(S,c),csub(S,l))
-    case CModify(c1,l,c2) => CModify(csub(S,c1),csub(S,l),csub(S,c2))
-    case CVariant(l,c) => CVariant(l,csub(S,c))
-    case CSwitch(c,cs) => CSwitch(csub(S,c),cs.map{(c)=>csub(S,c)})
-    case CLet(x,c1,c2) => CLet(x,csub(S,c1),csub(S-x,c2))
+  def csub(s:Map[x,c], c:c):c = c match {
+    case Cx(x) if s.contains(x) => csub(s,s(x))
+    case CAbs(x,c) => CAbs(x,csub(s - x,c))
+    case CApp(c1,c2) => CApp(csub(s,c1),csub(s,c2))
+    case CRecord(cs) => CRecord(cs.map{(c)=>csub(s,c)})
+    case CDot(c,l) => CDot(csub(s,c),csub(s,l))
+    case CModify(c1,l,c2) => CModify(csub(s,c1),csub(s,l),csub(s,c2))
+    case CVariant(l,c) => CVariant(l,csub(s,c))
+    case CSwitch(c,cs) => CSwitch(csub(s,c),cs.map{(c)=>csub(s,c)})
+    case CLet(x,c1,c2) => CLet(x,csub(s,c1),csub(s-x,c2))
     case _ => c
   }
 
-  def eval1(c:C):C = c match {
+  def eval1(c:c):c = c match {
     case CApp(c1,c2) if !v(c1) => CApp(eval1(c1),c2)
     case CApp(v1,c2) if !v(c2) => CApp(v1,eval1(c2))
     case CLet(x,c1,c2) if !v(c1) => CLet(x,eval1(c1),c2)
     case CRecord(cs) =>
-      def find(hs:List[C],ls:List[C]):C = ls match {
+      def find(hs:List[c], ls:List[c]):c = ls match {
         case List() => throw new Exception("error")
         case c::ls if !v(c) => CRecord(hs.reverse:::eval1(c)::ls)
         case c::ls => find(c::hs,ls)
@@ -61,7 +166,7 @@ object ics {
     case CApp(CAbs(x,c),v1) => csub(Map(x->v1),c)
     case CDot(CRecord(vs),CInt(i)) => vs(i-1)
     case CModify(CRecord(vs),CInt(i),v) =>
-      def find(hs:List[C],l:Int,ls:List[C]):C = ls match {
+      def find(hs:List[c], l:Int, ls:List[c]):c = ls match {
         case List() => throw new Exception("error")
         case c::ls if l==i => CRecord(hs.reverse:::v::ls)
         case c::ls => find(c::hs,l+1,ls)
@@ -72,110 +177,10 @@ object ics {
     case c => throw new Exception("error")
   }
 
-  def eval(c:C):C = try {
+  def eval(c:c):c = try {
     eval(eval1(c))
   } catch {
     case _:Throwable => c
   }
 
-  // ------------------------------
-  // compiler
-  // ------------------------------
-
-  def kinding(K:Map[σ,k],σ:σ):k = σ match {
-    case t if K.contains(t) => K(σ)
-    case TRecord(f) => krecord(f)
-    case TVariant(f) => kvariant(f)
-    case _ => U
-  }
-
-  def idxSet(t:σ,k:k):Set[(x,σ)] = k match {
-    case U => Set()
-    case krecord(f) => f.map{case(l,_)=>(l,t)}.toSet
-    case kvariant(f) => f.map{case(l,_)=>(l,t)}.toSet
-  }
-  /*
-  def idxSet1(σ:σ):Set[(x,σ)] = σ match {
-    case ∀(t,k,τ) => idxSet(tx(t),k) ++ idxSet(τ)
-    case _ => Set()
-  }
-  */
-  def idxSetK(K:Map[σ,k]):Set[(x,σ)] =
-    K.foldLeft(Set[(x,σ)]()) {
-      case (is1,(t,k)) => is1 ++ idxSet(t,k)
-    }
-
-  def sortf(f:List[(x,σ)]):List[(x,σ)] = f.sortWith{case((l1,_),(l2,_))=>l1<l2}
-  def sortk(k:k):k = k match {
-    case U => U
-    case krecord(f) => krecord(sortf(f))
-    case kvariant(f) => kvariant(sortf(f))
-  }
-  def sortσ(σ:σ):(List[(x,k)],σ) = σ match {
-    case TAll(ti,k,t) => val (l,t1) = sortσ(t); (ti->sortk(k)::l,t1)
-    case t => (List(),t)
-  }
-
-  def addIdx(σ:σ):σ = σ match {
-    case TRecord(lts) => TRecord(lts.map{case(x,t)=>(x,addIdx(t))})
-    case TVariant(lts) => TVariant(lts.map{case(x,t)=>(x,addIdx(t))})
-    case TAll(_,_,_) =>
-      val (l,t) = sortσ(σ)
-      val t2 = l.foldRight(addIdx(t)){
-        case((x,U),t)=>t
-        case((x,krecord(f)),t)=> f.foldRight(t){case((li,ti),t1)=>TIdx(li,Tx(x),t1)}
-        case((x,kvariant(f)),t)=> f.foldRight(t){case((li,ti),t1)=>TIdx(li,Tx(x),t1)}
-      }
-      l.foldRight(t2) {case((t,k),t3)=> TAll(t,k,t3)}
-    case t => t
-  }
-
-  def getci(L:List[(x,(x,σ))],l:x,τ:σ):C = {
-    val idxs = idxSet(τ, kinding(Map(), τ)).toList.zipWithIndex
-    idxs.find { case ((l1, τ1), i) => l == l1 && τ == τ1 } match {
-      case Some((_, i)) => CInt(i + 1)
-      case None =>
-        L.find { case (x, (l1, τ1)) => l == l1 && τ == τ1 } match {
-          case Some((x, _)) => Cx(x)
-          case None => throw new Exception("assert find index")
-        }
-    }
-  }
-
-  def c(L:List[(x,(x,σ))],T:Map[x,σ],M:M):C = M match {
-    case Mx(x) => Cx(x)
-    case MTApp(Mx(x),τs) =>
-      def mks(τs:List[σ],σ:σ):(Map[x,σ],σ) = (τs,σ) match {
-        case (List(),σ) => (Map(),σ)
-        case (τ::τs,TAll(t,_,σ)) => val(s,σ_) = mks(τs,σ); (s+(t->τ),σ_)
-        case (_,_) => throw new Exception("assert mks"+(σ,τs))
-      }
-      def addApp(L:List[(x,(x,σ))],S:Map[x,σ],σ:σ,c:C):C = σ match {
-        case TIdx(l,t,t2) => addApp(L,S,t2,CApp(c,getci(L,l,tsub(S,t))))
-        case _ => c
-      }
-      val (s,σ_) = mks(τs,T(x)); addApp(L,s,σ_,Cx(x))
-    case MTrue => CTrue
-    case MFalse => CFalse
-    case MInt(i) => CInt(i)
-    case MAbs(x,τ,m) => CAbs(x,c(L,T+(x->τ),m))
-    case MApp(m1,m2) => CApp(c(L,T,m1),c(L,T,m2))
-    case MRecord(f) => CRecord(f.map{case(_,m) => c(L,T,m)})
-    case MDot(m1,τ,l) => CDot(c(L,T,m1),getci(L,l,τ))
-    case MModify(m1,τ,l,m2) => val c1 = c(L,T,m1); CModify(c1,getci(L,l,τ),c(L,T,m2))
-    case MVariant(l,m,τ) => CVariant(getci(L,l,τ),c(L,T,m))
-    case MCase(m,f) => CSwitch(c(L,T,m),f.map{case(li,mi)=>c(L,T,mi)})
-    case MPoly(m1,t) =>
-      def getL(L:List[(x,(x,σ))],σ:σ):(List[(x,(x,σ))],List[x]) = σ match {
-        case TIdx(li,ti,t) => val ii = fresh(); val (l_,is) = getL(L,t); ((ii->(li,ti))::l_,ii::is)
-        case _ => (L,List())
-      }
-      val (_,idxs) = sortσ(addIdx(t))
-      val (l_,is) = getL(L,idxs)
-      is.foldRight(c(l_,T,m1)){(x,c)=>CAbs(x,c)}
-    case MLet(x,σ,m1,m2) => CLet(x,c(L,T,m1),c(L,T+(x->addIdx(σ)),m2))
-  }
-
-  def lk(K:Map[σ,k]):List[(x,(x,σ))] =
-    idxSetK(K).toList.map{case(l,t)=>(fresh(),(l,t))}
 }
