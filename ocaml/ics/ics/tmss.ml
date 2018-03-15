@@ -174,9 +174,12 @@ let add(f1, f2) =
     try let t2 = f2|>List.assoc l in (l,t2)
     with _ -> failwith "assert add"
   )
-
+let show_eK eK =
+    "{" ^ String.concat "," (List.map(fun (t,k) -> show_q t ^ "::" ^ show_k k) eK) ^ "}"
+let show_f f =
+  String.concat "," (List.map(fun (x,t) -> x ^ ":" ^ show_q t) f)
 let rec u1 = function
-  | (eE,eK,s,sK) when (Printf.printf "a:u1 "(*+(eE,eK,s,sK)*); false) -> assert false
+  (* | (eE,eK,s,sK) when (Printf.printf "a:u1 (eE,%s,s,sK)\n" (show_eK eK); false) -> assert false *)
   (* (i) type *)
   |((t1,t2)::eE,eK,s,sK) when t1=t2 -> (eE,eK,s,sK)
   (* (ii) *)
@@ -201,9 +204,9 @@ let rec u1 = function
       subK([x1,t2],sK)@[t1,KRecord(f1)])
   (* (iv) record2 *)
   |((Tx x1 as t1,(TRecord f2 as t2))::eE,eK0,s,sK) when
-    (try match List.assoc t2 eK0 with
+    (try match List.assoc t1 eK0 with
          | KRecord(f1) -> sub(dom(f1),dom(f2)) && not (List.mem x1 (ftv t2))
-         | _ ->false
+         | _ -> false
      with _ -> false) ->
     let f1 = match List.assoc t1 eK0 with KRecord f1 -> f1 | _ -> assert false in
     (subEq([x1,t2],eE@(dom(f1)|>List.map(fun l->(List.assoc l f1,List.assoc l f2)))),
@@ -237,7 +240,7 @@ let rec u1 = function
   (* (ix) arr *)
   |((TArr(t11,t21),TArr(t12,t22))::eE,eK,s,sK) ->
     (eE@[t11,t12;t21,t22],eK,s,sK)
-  | _ -> failwith "assert"
+  | ((t1,t2)::_,_,_,_) -> failwith (Printf.sprintf "assert (%s,%s)" (show_q t1) (show_q t2))
 
 let rec u = function
   | ([],eK,s,sK) -> (eK,s)

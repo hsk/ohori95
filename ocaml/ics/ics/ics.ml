@@ -134,6 +134,8 @@ let rec c((eL:(x * (x * q)) list), (eT:(x * q) list), (m:m)):c = match m with
 
 let rec lk(eK:(q * k) list):(x * (x * q)) list =
   idxSetK(eK)|> List.map (fun (l,t)->(fresh(),(l,t)))
+let show_lk lk =
+  "{" ^ String.concat "," (List.map (fun (x,(t,q))-> Printf.sprintf "idx(%s,%s,%s)" x t (show_q q)) lk) ^ "}"
 
 (* ------------------------------
  * evaluator

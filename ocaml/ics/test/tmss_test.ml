@@ -40,6 +40,7 @@ let test_typing () =
     let (k,s,m,t) = wk([],[],parseE e) in
     let (_,t1) = cls(k,[],t) in
     let m_ = mtsub(s,m) in
+    (* Printf.printf "m=%s t1=%s\nek=%s\n" (Tmss.show m) (show_q t1) (show_eK k); *)
     assert_equal (parseM em) m_;
     assert_equal (parseq eq_) t1;
     assert_equal eK_ k;
@@ -55,7 +56,6 @@ let test_typing () =
     "record" >:: begin fun () -> test(
       "{x=1,y=2}",
       "{x=1,y=2}","{x:int,y:int}") end;
-    (*
     "record2" >:: begin fun () -> test(
       "{x=1,y=2}#x",
       "{x=1,y=2}:{x:int,y:int}#x","int") end;
@@ -78,7 +78,7 @@ let test_typing () =
       [Tx("x1"),U;Tx("x2"),parsek("{{a:x1}}")]) end;
     "record8" >:: begin fun () -> test(
       "modify((λz.{x=1,y=z}) 10,x,2)",
-      "modify((λz:int.{x=1,y=z}) 10:{x:int,y:int},x,2)",
+      "modify(((λz:int.{x=1,y=z}) 10):{x:int,y:int},x,2)",
       "{x:int,y:int}") end;
     "record9" >:: begin fun () -> test(
       "(λa.{k=a#x,j=a#y}){x=1,y=2}",
@@ -110,33 +110,32 @@ let test_typing () =
       "int") end;
     "let2" >:: begin fun () -> tesk(
       "let id=λx.x in id",
-      "let id: ∀x0::U.x0->x0=Poly(λx:x0.x : ∀x0::U.x0->x0) in id!x1",
+      "let id: ∀x0::U.x0->x0=Poly((λx:x0.x) : ∀x0::U.x0->x0) in id!x1",
       "∀x1::U.x1->x1",
       [Tx("x1"),U]) end;
     "let3" >:: begin fun () -> test(
       "let id=λx.x in id 1",
-      "let id:∀x0::U.x0->x0=Poly(λx:x0.x : ∀x0::U.x0->x0) in (id!int) 1",
+      "let id:∀x0::U.x0->x0=Poly((λx:x0.x) : ∀x0::U.x0->x0) in (id!int) 1",
       "int") end;
     "let4" >:: begin fun () -> test(
       "let id=λx.λy.x in id 1 2",
       "let id: ∀x0::U.∀x1::U.x0->x1->x0
-             =Poly(λx:x0.λy:x1.x : ∀x0::U.∀x1::U.x0->x1->x0)
+             =Poly((λx:x0.λy:x1.x) : ∀x0::U.∀x1::U.x0->x1->x0)
        in (id!int!int) 1 2",
       "int") end;
     "let_poly" >:: begin fun () -> tesk(
       "let id = λx.x#a in id",
       "let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
-         = Poly(λx:x2.x:x2#a : ∀x1::U.∀x2::{{a:x1}}.x2->x1)
+         = Poly((λx:x2.x:x2#a) : ∀x1::U.∀x2::{{a:x1}}.x2->x1)
                        in id!x3!x4",
       "∀x4::{{a:x3}}.∀x3::U.x4->x3",
-      [Tx("x3"),U;Tx("x4"),parsek("{{a:x3}}")]) end;
+      [Tx("x4"),parsek("{{a:x3}}");Tx("x3"),U]) end;
     "let_poly2" >:: begin fun () -> test(
       "let id=λx.x#a in id {a=10,b=20}",
       "let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
-               = Poly(λx:x2.x:x2#a : ∀x1::U.∀x2::{{a:x1}}.x2->x1)
+               = Poly((λx:x2.x:x2#a) : ∀x1::U.∀x2::{{a:x1}}.x2->x1)
                      in (id!int!{a:int,b:int}) {a=10,b=20}",
       "int") end;
-    *)
   ]
 
 

@@ -1,19 +1,21 @@
+open Mss_lexer
+open Tmss_lexer
+open Tmss
+
 let run src =
   Printf.printf "%s\n" "============";
   let e = Mss_lexer.parseE(src) in
   Printf.printf "%s\n" (Mss.show e);
-  (*
   Tmss.reset();
-  let (k,s,m,t) = Tmss.wk(Map(),Map(),e) in
+  let (k,s,m,t) = Tmss.wk([],[],e) in
   let (k1,t1) = Tmss.cls(k,s,t) in
   let m_ = Tmss.mtsub(s,m) in
-  Printf.printf "%s\n" (m_);
-  Printf.printf "%s\n" ("k="+k+ " lk="+ics.lk(k));
-  let c_ = ics.c(ics.lk(k),Map(),m_) in
-  Printf.printf "%s\n" (c_);
-  Printf.printf "%s\n" ("------------ eval "+c_);
-  Printf.printf "%s\n" (ics.eval(c_)+":"+Tmss.tsub(s,t1));
-  *)
+  Printf.printf "%s\n" (show m_);
+  Printf.printf "k=%s lk=%s\n" (show_eK k) (Ics.show_lk (Ics.lk k));
+  let c_ = Ics.c(Ics.lk(k),[],m_) in
+  Printf.printf "%s\n" (Ics.show c_);
+  Printf.printf "------------ eval %s\n" (Ics.show c_);
+  Printf.printf "%s : %s\n" (Ics.show (Ics.eval(c_))) (show_q (Tmss.tsub(s,t1)));
   ()
 let () =
   run "1";

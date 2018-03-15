@@ -5,7 +5,7 @@ all:
 	ocamllex ics/tmss_lexer.mll
 	ocamlyacc ics/ics_parser.mly
 	ocamllex ics/ics_lexer.mll
-	ocamlfind ocamlc -o main -package oUnit -linkpkg -g \
+	ocamlfind ocamlc -g -o main -package oUnit -linkpkg -g \
 	  -I ics ics/utils.ml \
 	  ics/mss.ml ics/mss_parser.mli ics/mss_parser.ml ics/mss_lexer.ml \
 	  ics/tmss.ml ics/tmss_parser.mli ics/tmss_parser.ml ics/tmss_lexer.ml \
