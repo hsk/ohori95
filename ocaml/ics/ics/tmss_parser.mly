@@ -34,7 +34,7 @@ i       : INT                                   { MInt($1) }
 cb      : TRUE                                  { MTrue }
         | FALSE                                 { MFalse }
         | i                                     { $1 }
-m       : m1 m                                  { MApp($1,$2) }
+m       : m m1                                  { MApp($1,$2) }
         | m1                                    { $1 }
 m1      : m1 COLON q SHARP l                    { MDot($1,$3,$5) }
         | m2                                    { $1 }
@@ -50,7 +50,7 @@ m3      : X                                     { Mx($1) }
         | CASE m OF LT lms GT                   { MCase($2,$5) }
         | MODIFY LPAREN m2 COLON q COMMA l COMMA m RPAREN
                                                 { MModify($3,$5,$7,$9) }
-        | POLY LPAREN m2 COLON q RPAREN          { MPoly($3,$5) }
+        | POLY LPAREN m2 COLON q RPAREN         { MPoly($3,$5) }
         | LET X COLON q EQ m IN m               { MLet($2,$4,$6,$8) }
         | LPAREN m RPAREN                       { $2 }
 lm      : l EQ m                                { ($1,$3) }

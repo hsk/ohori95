@@ -17,7 +17,21 @@ and q =
   | TVariant of (l * q) list
   | TAll of (x * k * q)
   | TIdx of (x * q * q)
-
+let rec show_k = function
+  | U -> "U"
+  | KRecord(lqs) -> Printf.sprintf "{{%s}}" (show_lqs lqs)
+  | KVariant(lqs) -> Printf.sprintf "<<%s>>" (show_lqs lqs)
+and show_q = function
+  | TBool -> "bool"
+  | TInt -> "int"
+  | Tx x -> x
+  | TArr(q, q2) -> Printf.sprintf "(%s->%s)" (show_q q) (show_q q2)
+  | TRecord lqs -> Printf.sprintf "{%s}" (show_lqs lqs)
+  | TVariant lqs -> Printf.sprintf "<%s>" (show_lqs lqs)
+  | TAll(x, k, q) -> Printf.sprintf "∀%s::%s.%s" x (show_k k) (show_q q)
+  | TIdx(x, q, q2) -> Printf.sprintf "idx(%s,%s)=>%s" x (show_q q) (show_q q2)
+and show_lqs lqs =
+  String.concat "," (lqs|>List.map(fun (l,q)->l^":"^(show_q q)))
 type m =
   | Mx of x
   | MTApp of (m * q list)
@@ -33,6 +47,26 @@ type m =
   | MCase of (m * (l * m) list)
   | MPoly of (m * q)
   | MLet of (x * q * m * m)
+
+let rec show = function
+  | MTApp(m, qs)      -> Printf.sprintf "(%s!%s)" (show m) (show_qs qs)
+  | MTrue             -> "true"
+  | MFalse            -> "false"
+  | MInt i            -> string_of_int i
+  | Mx x              -> x
+  | MAbs(x,q,m)       -> Printf.sprintf "λ%s:%s.%s" x (show_q q) (show m)
+  | MApp(m, m2)       -> Printf.sprintf "(%s %s)" (show m) (show m2)
+  | MRecord(lms)      -> Printf.sprintf "{%s}" (show_lms lms)
+  | MDot(m,q,l)       -> Printf.sprintf "(%s:%s#%s)" (show m) (show_q q) l
+  | MModify(m,q,l,m2) -> Printf.sprintf "modify(%s:%s,%s,%s)" (show m) (show_q q) l (show m2)
+  | MVariant(l, m, q) -> Printf.sprintf "(<%s=%s>:%s)" l (show m) (show_q q)
+  | MCase(m, lms)     -> Printf.sprintf "case %s of <%s>" (show m) (show_lms lms)
+  | MPoly(m, q)       -> Printf.sprintf "Poly(%s:%s)" (show m) (show_q q)
+  | MLet(x, q, m, m2) -> Printf.sprintf "let %s:%s = %s in %s" x (show_q q) (show m) (show m2)
+and show_lms lms =
+  String.concat "," (List.map(fun(l,m)->l^"="^show m) lms)
+and show_qs qs =
+  String.concat "!" (List.map show_q qs)
 
 (* Substitutions *)
 let rec ksub (s,k) = match k with
@@ -115,7 +149,7 @@ let reset() = i := 0
 let resetn(ii:int) = i := ii
 let fresh() =
   let ii = !i in
-  i := 1;
+  i := !i + 1;
   Printf.sprintf "x%d" ii
 
 let fresht():q = Tx(fresh())

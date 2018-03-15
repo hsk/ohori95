@@ -67,7 +67,7 @@ let rec eval1 = function
   | ERecord(les) ->
     let rec find hs = function
       | [] -> failwith "error"
-      | (l, e) :: ls when not (v e) -> ERecord(List.rev hs @ (l, eval1 e) :: ls)
+      | (l, e) :: ls when not (v e) -> ERecord((List.rev hs) @ ((l, eval1 e) :: ls))
       | (l, e) :: ls -> find ((l, e) :: hs) ls
     in
     find [] les
@@ -82,7 +82,7 @@ let rec eval1 = function
   | EModify(ERecord(lvs), li, v) ->
     let rec find hs = function
       | [] -> failwith "error"
-      | (l, e) :: ls when l = li -> ERecord(List.rev hs @ (l, v) :: ls)
+      | (l, e) :: ls when l = li -> ERecord((List.rev hs) @ ((l, v) :: ls))
       | (l, e) :: ls -> find ((l, e) :: hs) ls
     in
     find [] lvs

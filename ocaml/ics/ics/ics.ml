@@ -16,9 +16,25 @@ type c =
   | CVariant of (c * c)
   | CSwitch of (c * c list)
 
+let rec show = function
+  | CTrue             -> "true"
+  | CFalse            -> "false"
+  | CInt i            -> string_of_int i
+  | Cx x              -> x
+  | CAbs(x, c)        -> Printf.sprintf "λ%s.%s" x (show c)
+  | CApp(c, c2)       -> Printf.sprintf "(%s %s)" (show c) (show c2)
+  | CRecord(cs)       -> Printf.sprintf "{%s}" (show_cs cs)
+  | CDot(c, l)        -> Printf.sprintf "%s#%s" (show c) (show l)
+  | CModify(c, l, c2) -> Printf.sprintf "modify(%s,%s,%s)" (show c) (show l) (show c2)
+  | CVariant(l, c)    -> Printf.sprintf "<%s=%s>" (show l) (show c)
+  | CSwitch(c, cs)    -> Printf.sprintf "switch %s of %s" (show c) (show_cs cs)
+  | CLet(x, c, c2)    -> Printf.sprintf "let %s = %s in %s" x (show c) (show c2)
+and show_cs cs =
+  String.concat "," (List.map show cs)
+
 (* ------------------------------
-  * compiler
-  * ------------------------------ *)
+ * compiler
+ * ------------------------------ *)
 
 let rec kinding(eK, q):k = match q with
   | q when List.mem_assoc q eK -> List.assoc q eK
@@ -95,6 +111,7 @@ let rec c((eL:(x * (x * q)) list), (eT:(x * q) list), (m:m)):c = match m with
       | _ -> c
     in
     let (s,t) = stripq(ts,List.assoc x eT) in addApp(eL,s,t,Cx(x))
+  | MTApp(_,_) -> assert false
   | MTrue -> CTrue
   | MFalse -> CFalse
   | MInt(i) -> CInt(i)

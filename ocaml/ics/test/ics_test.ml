@@ -133,7 +133,6 @@ let test_compile () =
     assert_equal(parseC(cx))(c(lk(eK),[],parseM(m)))
   in
   "compile" >::: [
-    
     "int"      >:: begin fun () -> test("10",   "10"   ,"int" ,"10") end;
     "true"     >:: begin fun () -> test("true", "true" ,"bool","true") end;
     "false"    >:: begin fun () -> test("false","false","bool","false") end;

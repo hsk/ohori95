@@ -23,6 +23,8 @@ let test () =
     "app" >:: begin fun () ->
       assert_equal(EApp(EAbs("x",Ex("x")),EInt(1)))(
         parseE("(λx.x) 1"));
+      assert_equal(EApp(EApp(Ex("a"),Ex("b")),Ex("c")))
+                  (parseE("a b c"));
     end;
     "record" >:: begin fun () ->
       assert_equal(ERecord["x",EInt(1);"y",EInt(2)])(
