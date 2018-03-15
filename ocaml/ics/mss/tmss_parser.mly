@@ -1,6 +1,4 @@
-%{
-open Tmss
-%}
+%{ open Tmss %}
 %token <string> X %token <int> INT
 %token TRUE FALSE CASE OF MODIFY LET IN EOF
 %token SHARP LAMBDA DOT COMMA EQ LT GT LPAREN RPAREN LBRACE RBRACE

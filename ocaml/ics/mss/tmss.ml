@@ -17,6 +17,7 @@ and q =
   | TVariant of (l * q) list
   | TAll of (x * k * q)
   | TIdx of (x * q * q)
+
 let rec show_k = function
   | U -> "U"
   | KRecord(lqs) -> Printf.sprintf "{{%s}}" (show_lqs lqs)
@@ -32,6 +33,7 @@ and show_q = function
   | TIdx(x, q, q2) -> Printf.sprintf "idx(%s,%s)=>%s" x (show_q q) (show_q q2)
 and show_lqs lqs =
   String.concat "," (lqs|>List.map(fun (l,q)->l^":"^(show_q q)))
+
 type m =
   | Mx of x
   | MTApp of (m * q list)
@@ -68,12 +70,19 @@ and show_lms lms =
 and show_qs qs =
   String.concat "!" (List.map show_q qs)
 
+let show_eK eK =
+  "{" ^ String.concat "," (List.map(fun (t,k) -> show_q t ^ "::" ^ show_k k) eK) ^ "}"
+
+let show_f f =
+  String.concat "," (List.map(fun (x,t) -> x ^ ":" ^ show_q t) f)
+
 (* Substitutions *)
+
 let rec ksub (s,k) = match k with
   | U -> U
   | KRecord(f) -> KRecord(f |> List.map(fun (l,t)->(l,tsub(s,t))))
   | KVariant(f) -> KVariant(f |> List.map(fun (l,t)->(l,tsub(s,t))))
-and tsub(s, q):q = match q with
+and tsub (s, q):q = match q with
   | Tx(x) when List.mem_assoc x s -> tsub(s,List.assoc x s)
   | TArr(q1,q2) -> TArr(tsub(s,q1),tsub(s,q2))
   | TRecord(f) -> TRecord(f|>List.map(fun (l,t)->(l,tsub(s,t))))
@@ -81,7 +90,7 @@ and tsub(s, q):q = match q with
   | TAll(x,k,q) -> TAll(x,ksub(List.del_assoc x s,k),tsub(List.del_assoc x s,q))
   | _ -> q
 
-let rec msub(s,m) = match m with
+let rec msub (s,m) = match m with
   | Mx(x) when List.mem_assoc x s -> msub(s,List.assoc x s)
   | MTApp(m,qs) -> MTApp(msub(s,m),qs)
   | MAbs(x,q,m) -> MAbs(x,q,msub(List.del_assoc x s,m))
@@ -108,12 +117,9 @@ let rec mtsub(s, m):m = match m with
   | MLet(x,q,m1,m2) -> MLet(x,tsub(s,q),mtsub(s,m1),mtsub(s,m2))
   | _ -> m
 
-let subEq(s, eE) =
-  eE|>List.map(fun(t1,t2)->(tsub(s,t1),tsub(s,t2)))
-let subT(s, eT) =
-  eT|>List.map(fun(x,t)->(x,tsub(s,t)))
-let subK(s, eK) =
-  eK|>List.map(fun(q,k)->(tsub(s,q),ksub(s,k)))
+let subEq(s, eE) = eE|>List.map(fun(t1,t2)->(tsub(s,t1),tsub(s,t2)))
+let subT(s, eT) = eT|>List.map(fun(x,t)->(x,tsub(s,t)))
+let subK(s, eK) = eK|>List.map(fun(q,k)->(tsub(s,q),ksub(s,k)))
 let ssub(s, s1) =
   let rec xtsub(s, x) =
     try match List.assoc x s with
@@ -174,10 +180,7 @@ let add(f1, f2) =
     try let t2 = f2|>List.assoc l in (l,t2)
     with _ -> failwith "assert add"
   )
-let show_eK eK =
-    "{" ^ String.concat "," (List.map(fun (t,k) -> show_q t ^ "::" ^ show_k k) eK) ^ "}"
-let show_f f =
-  String.concat "," (List.map(fun (x,t) -> x ^ ":" ^ show_q t) f)
+
 let rec u1 = function
   (* | (eE,eK,s,sK) when (Printf.printf "a:u1 (eE,%s,s,sK)\n" (show_eK eK); false) -> assert false *)
   (* (i) type *)
@@ -256,7 +259,6 @@ let cls(eK, eT, t) = match t with
     let eK1 = eK |>List.filter(function (Tx x,_)->List.mem x ts | _ ->false) in
     (eK |> List.delete_assoc (List.keys eK1),
      List.fold_right(function (Tx x,k) -> (fun t -> TAll(x,k,t)) | _ -> (fun _ -> assert false)) eK1 t )
-
 
 let rec wk(eK, eT, e) = match e with
   | Mss.EInt(i) -> (eK,[],MInt(i),TInt)

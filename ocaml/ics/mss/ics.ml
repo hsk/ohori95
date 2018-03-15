@@ -46,7 +46,6 @@ let rec idxSet(t, k) = match k with
   | U -> []
   | KRecord(f) ->  f|>List.map(fun(l,_)->(l,t))
   | KVariant(f) -> f|>List.map(fun(l,_)->(l,t))
-
 (*
 let rec idxSet1(q:q):Set[(x,q)] = q match {
   case ∀(x,k,t) => idxSet(tx(x),k) ++ idxSet(t)
@@ -57,6 +56,7 @@ let rec idxSetK(eK) =
   List.fold_left (fun is1 (t,k) ->
     List.union_assoc is1 (idxSet(t,k))
   ) [] eK
+
 let rec sortf(f) = f |> List.sort(fun (l1,_) (l2,_) ->String.compare l1 l2)
 let rec sortk = function
   | U -> U
@@ -79,7 +79,6 @@ let rec addIdx = function
     List.fold_right (fun (t,k) t3 -> TAll(t,k,t3)) l t2
   | t -> t
 
-
 let rec getci((eL:(x * (x * q)) list), (l:x), (t:q)):c =
   try
     let idxs = idxSet(t, kinding([], t)) in
@@ -94,7 +93,6 @@ let rec getci((eL:(x * (x * q)) list), (l:x), (t:q)):c =
     let (x,_) = eL|> List.find (fun (x, (l1, t1)) -> l = l1 && t = t1) in
     Cx x
   with _ -> failwith ("assert find index")
-
 
 let rec c((eL:(x * (x * q)) list), (eT:(x * q) list), (m:m)):c = match m with
   | Mx(x) -> Cx(x)

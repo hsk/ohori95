@@ -4,7 +4,7 @@ open Tmss
 
 let run src =
   Printf.printf "%s\n" "============";
-  let e = Mss_lexer.parseE(src) in
+  let e = parseE(src) in
   Printf.printf "%s\n" (Mss.show e);
   Tmss.reset();
   let (k,s,m,t) = Tmss.wk([],[],e) in

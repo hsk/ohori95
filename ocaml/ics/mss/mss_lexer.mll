@@ -1,6 +1,4 @@
-{
-  open Tmss_parser
-}
+{ open Mss_parser }
 let lower = ['a'-'z']
 let upper = ['A'-'Z']
 let digit = ['0'-'9']
@@ -17,11 +15,6 @@ rule token = parse
                            | "modify" -> MODIFY
                            | "let"    -> LET
                            | "in"     -> IN
-                           | "Poly"   -> POLY
-                           | "int"    -> TINT
-                           | "bool"   -> BOOL
-                           | "idx"    -> IDX
-                           | "U"      -> U
                            | x        -> X x }
   | '-'? digit+ as i     { INT (int_of_string i) }
   | "#"                  { SHARP }
@@ -35,16 +28,6 @@ rule token = parse
   | ")"                  { RPAREN }
   | "{"                  { LBRACE }
   | "}"                  { RBRACE }
-  | "->"                 { ARROW }
-  | "=>"                 { DARROW }
-  | "::"                 { DCOLON }
-  | ":"                  { COLON }
-  | "∀"                 { ALL }
-  | "!"                  { NOT }
   | eof                  { EOF }
-  | _                    { failwith "lex error" }
-{
-let parsek src = k token (Lexing.from_string src)
-let parseq src = q token (Lexing.from_string src)
-let parseM src = m token (Lexing.from_string src)
-}
+  | _ as i               { Printf.printf "error '%c'\n%!" i; failwith "lex error"  }
+{ let parseE src = e token (Lexing.from_string src) }
