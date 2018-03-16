@@ -11,7 +11,7 @@ let run src =
   let (k1,t1) = Tmss.cls(k,s,t) in
   let m_ = Tmss.mtsub(s,m) in
   Printf.printf "%s\n" (show m_);
-  Printf.printf "k=%s lk=%s\n" (show_eK k) (Ics.show_lk (Ics.lk k));
+  Printf.printf "k=%s lk=%s\n" (show_eK k) (Ics.show_eL (Ics.lk k));
   let c_ = Ics.c(Ics.lk(k),[],m_) in
   Printf.printf "%s\n" (Ics.show c_);
   Printf.printf "------------ eval %s\n" (Ics.show c_);

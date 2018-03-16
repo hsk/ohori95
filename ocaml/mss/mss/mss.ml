@@ -19,7 +19,11 @@ type e =
   | ECase of e * (l * e) list
   | ELet of x * e * e
 
-let rec show = function
+type s = (x * e) list
+type f = (x * e) list
+
+let rec show : e -> string =
+  function
   | ETrue             -> "true"
   | EFalse            -> "false"
   | EInt i            -> string_of_int i
@@ -32,10 +36,12 @@ let rec show = function
   | EVariant(l, e)    -> Printf.sprintf "<%s=%s>" l (show e)
   | ECase(e, les)     -> Printf.sprintf "case %s of <%s>" (show e) (show_les les)
   | ELet(x, e, e2)    -> Printf.sprintf "let %s = %s in %s" x (show e) (show e2)
-and show_les les =
-  String.concat "," (List.map(fun(l,e)->l^"="^show e) les)
+and show_les : f -> string =
+  fun les ->
+    String.concat "," (List.map(fun(l,e)->l^"="^show e) les)
 
-let rec v = function
+let rec v : e -> bool =
+  function
   | EInt(_) -> true
   | ETrue -> true
   | EFalse -> true
@@ -46,7 +52,8 @@ let rec v = function
 
 (* Substitutions *)
 
-let rec esub s = function
+let rec esub : s -> e -> e =
+  fun s -> function
   | Ex(x) when List.mem_assoc x s -> esub s (List.assoc x s)
   | EAbs(x, e) -> EAbs(x, esub (List.del_assoc x s) e)
   | EApp(e1, e2) -> EApp(esub s e1, esub s e2)
@@ -60,7 +67,8 @@ let rec esub s = function
 
 (* Reduction rules *)
 
-let rec eval1 = function
+let rec eval1 : e -> e =
+  function
   | EApp(e1, e2) when not (v e1) -> EApp(eval1 e1, e2)
   | EApp(v1, e2) when not (v e2) -> EApp(v1, eval1 e2)
   | ELet(x, e1, e2) when not (v e1) -> ELet(x, eval1 e1, e2)
@@ -90,5 +98,5 @@ let rec eval1 = function
   | ELet(x, v, e) -> esub [x, v] e
   | e -> failwith "error"
 
-let rec eval e =
-  try eval (eval1 e) with _ -> e
+let rec eval : e -> e =
+  fun e -> try eval (eval1 e) with _ -> e
