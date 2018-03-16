@@ -33,7 +33,7 @@ let test_typing () =
     let (_,t1) = cls(k,M.empty,t) in
     (*println("test t1="+t1)*)
     let m_ = mtsub(s,m) in
-    Printf.printf "m=%s t1=%s\n" (Tmss.show m_) (show_q t1);
+    (*Printf.printf "m=%s t1=%s\n" (Tmss.show m_) (show_q t1);*)
     assert_equal (parseM em) m_;
     assert_equal (parseq t_) t1;
   in

@@ -81,12 +81,9 @@ and show_qs : q list -> string =
 (* Substitutions *)
 module Q = MMake(struct
   type t = q
-  let compare q1 q2 = match q1,q2 with
-    | Tx(x1),Tx(x2) -> String.compare x1 x2
-    | _ -> assert false
+  let compare q1 q2 = String.compare (show_q q1) (show_q q2)
 end)
 
-(* type s = m M.t *)
 type sq = q M.t
 type eK = k Q.t
 type eT = q M.t
@@ -109,22 +106,7 @@ and tsub : (sq * q) -> q =
   | TVariant(f) -> TVariant(f|>List.map(fun (l,t)->(l,tsub(s,t))))
   | TAll(x,k,q) -> TAll(x,ksub(M.remove x s,k),tsub(M.remove x s,q))
   | _ -> q
-(*
-let rec msub : (s * m) -> m =
-  fun (s,m) -> match m with
-  | Mx(x) when M.mem x s -> msub(s,M.find x s)
-  | MTApp(m,qs) -> MTApp(msub(s,m),qs)
-  | MAbs(x,q,m) -> MAbs(x,q,msub(M.remove x s,m))
-  | MApp(m1,m2) -> MApp(msub(s,m1),msub(s,m2))
-  | MRecord(f) -> MRecord(f|>List.map(fun (l,m)->(l,msub(s,m))))
-  | MDot(m,q,l) -> MDot(msub(s,m),q,l)
-  | MModify(m1,q,l,m2) -> MModify(msub(s,m1),q,l,msub(s,m2))
-  | MVariant(l,m,q) -> MVariant(l,msub(s,m),q)
-  | MCase(m,f) -> MCase(msub(s,m),f|>List.map(fun (l,m)->(l,msub(s,m))))
-  | MPoly(m,q) -> MPoly(msub(s,m),q)
-  | MLet(x,q,m1,m2) -> MLet(x,q,msub(M.remove x s,m1),msub(M.remove x s,m2))
-  | _ -> m
-*)
+
 let rec mtsub : (sq * m) -> m =
   fun (s, m) -> match m with
   | MTApp(m,qs) -> MTApp(mtsub(s,m),qs|>List.map(fun q -> tsub(s,q)))
@@ -271,8 +253,8 @@ let rec u1 : (eE * eK * sq * eK) -> (eE * eK * sq * eK) =
   (* (ix) arr *)
   | ((TArr(t11,t21),TArr(t12,t22))::eE,eK,s,sK) ->
     (eE@[t11,t12;t21,t22],eK,s,sK)
-  | ((t1,t2)::_,_,_,_) -> failwith (Printf.sprintf "assert (%s,%s)" (show_q t1) (show_q t2))
-
+  | (_,_,_,_) -> failwith "unify error"
+  
 let rec u : (eE * eK * sq * eK) -> (eK * sq) =
   function
   | ([],eK,s,sK) -> (eK,s)
@@ -288,12 +270,13 @@ let cls : (eK * eT * q) -> (eK * q) =
   | TAll(x,k,t) -> (eK,TAll(x,k,t))
   | t ->
     let ts = S.diff (eftv(eK, t)) (eftv(eK, TRecord(eT|>M.bindings))) in
-    let eK1 = eK |> Q.filter (function (Tx x) -> fun _ -> S.mem x ts | _ -> fun _ ->false) in
+    let eK1 = eK |> Q.filter (fun q _ -> match q with Tx x -> S.mem x ts | _ ->false) in
     (Q.diff eK eK1,
-     Q.fold(function (Tx x) -> (fun k t -> TAll(x,k,t)) | _ -> (fun _ _ -> assert false)) eK1 t )
+     Q.fold(fun q k t -> match q with Tx x -> TAll(x,k,t) | _ -> assert false) eK1 t)
 
 let rec wk : (eK * eT * Mss.e) -> (eK * eT * m * q) =
-  fun (eK, eT, e) -> match e with
+  fun (eK, eT, e) ->
+  match e with
   | Mss.EInt(i) -> (eK,M.empty,MInt(i),TInt)
   | Mss.ETrue -> (eK,M.empty,MTrue,TBool)
   | Mss.EFalse -> (eK,M.empty,MFalse,TBool)
@@ -304,8 +287,8 @@ let rec wk : (eK * eT * Mss.e) -> (eK * eT * m * q) =
         let (ts,q_,eK_,s_) = foldxq(q,eK,s) in
         (ti::ts,q_,eK_|>Q.add ti k,s_|>M.add t_ ti)
       | q -> ([],q,eK,s)
-     in
-    let (ts,t,eK_,s)=foldxq(M.find x eT,Q.empty,M.empty) in
+    in
+    let (ts,t,eK_,s) = foldxq(M.find x eT,Q.empty,M.empty) in
     (Q.union eK (Q.map(fun ki->ksub(s,ki)) eK_),M.empty,
       (if ts=[] then Mx x else MTApp(Mx(x),ts)),tsub(s,t))
   | Mss.EAbs(x,e1) ->
@@ -354,7 +337,7 @@ let rec wk : (eK * eT * Mss.e) -> (eK * eT * m * q) =
          subT(M.union si s1,eTi1),
          (li,mi)::ms1,
          (li,ti)::lts1,
-         eK1 |>Q.add ti U,
+         eK1|>Q.add ti U,
          (qi,TArr(ti,t0))::tts1,
          M.union si s1)
     ) les (eK0,subT(s0,eT),[],[],Q.empty,[],s0)
