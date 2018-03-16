@@ -60,8 +60,11 @@ let rec idxSetK : eK -> idxSet =
     List.union_assoc is1 (idxSet(t,k))
   ) [] eK
 
-let rec sortf : ft -> ft = fun f -> f |> List.sort(fun (l1,_) (l2,_) ->String.compare l1 l2)
-let rec sortk : k -> k = function
+let rec sortf : ft -> ft =
+  fun f ->
+  f |> List.sort(fun (l1,_) (l2,_) ->String.compare l1 l2)
+let rec sortk : k -> k =
+  function
   | U -> U
   | KRecord(f) -> KRecord(sortf(f))
   | KVariant(f) -> KVariant(sortf(f))
@@ -104,14 +107,14 @@ let rec c : (eL * eT * m) -> c =
   fun (eL,eT,m) -> match m with
   | Mx(x) -> Cx(x)
   | MTApp(Mx(x),ts) ->
-    let rec stripq((ts:q list), (q:q)):((x * q) list * q) =
-      match (ts,q) with
+    let rec stripq : (q list * q) -> (x * q) list * q =
+      function
       | ([],q) -> ([],q)
       | (t::ts,TAll(x,_,q)) -> let (s,q_) = stripq(ts,q) in (List.union_assoc s [x,t], q_)
       | (_,_) -> failwith ("assert stripq" (* +(q,ts) *))
     in
-    let rec addApp((eL:eL), (s:(x * q) list), (q:q), (c:c)):c =
-      match q with
+    let rec addApp : (eL * sq * q * c) -> c =
+      fun (eL,s,q,c) -> match q with
       | TIdx(l,t,t2) -> (addApp(eL,s,t2,CApp(c,getci(eL,l,tsub(s,t)))):c)
       | _ -> c
     in
@@ -128,7 +131,8 @@ let rec c : (eL * eT * m) -> c =
   | MVariant(l,m,t) -> CVariant(getci(eL,l,t),c(eL,eT,m))
   | MCase(m,f) -> CSwitch(c(eL,eT,m),f|>List.map(fun (li,mi)->c(eL,eT,mi)))
   | MPoly(m1,t) ->
-    let rec getL((eL:eL), (q:q)):(eL * x list) = match q with
+    let rec getL : (eL * q) -> (eL * x list) =
+      fun (eL,q) -> match q with
       | TIdx(l,ti,t) -> let x = fresh() in let (eL_,is) = getL(eL,t) in ((x,(l,ti))::eL_,x::is)
       | _ -> (eL,[])
     in
@@ -178,7 +182,8 @@ let rec eval1 : c -> c =
   | CApp(v1,c2) when not (v c2) -> CApp(v1,eval1(c2))
   | CLet(x,c1,c2) when not (v c1) -> CLet(x,eval1(c1),c2)
   | CRecord(cs) ->
-    let rec find(hs, ls):c = match ls with
+    let rec find : (c list * c list) -> c =
+      fun (hs, ls) -> match ls with
       | [] -> failwith ("error")
       | c::ls when not (v c) -> CRecord(List.rev hs @ eval1(c)::ls)
       | c::ls -> find(c::hs,ls)
@@ -193,9 +198,10 @@ let rec eval1 : c -> c =
   | CApp(CAbs(x,c),v1) -> csub([x,v1],c)
   | CDot(CRecord(vs),CInt(i)) -> List.nth vs (i-1)
   | CModify(CRecord(vs),CInt(i),v) ->
-    let rec find(hs, l, ls):c = match ls with
+    let rec find : (c list * i * c list) -> c =
+      fun (hs, l, ls) -> match ls with
       | [] -> failwith ("error")
-      | c::ls when l==i -> CRecord(List.rev hs @ v::ls)
+      | c::ls when l=i -> CRecord(List.rev hs @ v::ls)
       | c::ls -> find(c::hs,l+1,ls)
     in
     find([],1,vs)
