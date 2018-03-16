@@ -151,26 +151,26 @@ let ssub : (sq * sq) -> sq = fun (s, s1) ->
   s1|>M.bindings|>List.map(fun (x, t)->(xtsub(s,x),tsub(s,t)))|>M.of_list
 
 (* Free Type variables *)
-type ftv = x list
+type ftv = S.t
 let rec ftv : q -> ftv =
   function
-  | Tx(x) -> [x]
-  | TArr(q1,q2) -> List.union (ftv q1) (ftv q2)
-  | TRecord(f) -> List.fold_left (fun tv (_,m) -> List.union tv (ftv m)) [] f
-  | TVariant(f) -> List.fold_left (fun tv (_,m) -> List.union tv (ftv m)) [] f
-  | TAll(t,k,q) -> List.del t (List.union (kftv k) (ftv q))
-  | _ -> []
+  | Tx(x) -> S.singleton x
+  | TArr(q1,q2) -> S.union (ftv q1) (ftv q2)
+  | TRecord(f) -> List.fold_left (fun tv (_,m) -> S.union tv (ftv m)) S.empty f
+  | TVariant(f) -> List.fold_left (fun tv (_,m) -> S.union tv (ftv m)) S.empty f
+  | TAll(t,k,q) -> S.remove t (S.union (kftv k) (ftv q))
+  | _ -> S.empty
 and kftv : k -> ftv =
   function
-  | U -> []
-  | KRecord(f) -> List.fold_left (fun tv (_,m) -> List.union tv (ftv m)) [] f 
-  | KVariant(f) -> List.fold_left (fun tv (_,m) -> List.union tv (ftv m)) [] f
+  | U -> S.empty
+  | KRecord(f) -> List.fold_left (fun tv (_,m) -> S.union tv (ftv m)) S.empty f 
+  | KVariant(f) -> List.fold_left (fun tv (_,m) -> S.union tv (ftv m)) S.empty f
 
 let eftv : (eK * q) -> ftv =
   fun (eK, q) ->
   try
     let k = Q.find q eK in
-    List.union (ftv q) (kftv k)
+    S.union (ftv q) (kftv k)
   with _ -> ftv q
 
 (* Type system *)
@@ -214,10 +214,10 @@ let rec u1 : (eE * eK * sq * eK) -> (eE * eK * sq * eK) =
   (* (i) type *)
   | ((t1,t2)::eE,eK,s,sK) when t1=t2 -> (eE,eK,s,sK)
   (* (ii) *)
-  | ((Tx x as t,t2)::eE,eK,s,sK) when not (List.mem x (ftv t2)) && (try (Q.find t eK)=U with _ -> false) ->
+  | ((Tx x as t,t2)::eE,eK,s,sK) when not (S.mem x (ftv t2)) && (try (Q.find t eK)=U with _ -> false) ->
     (subEq(M.singleton x t2,eE),            subK(M.singleton x t2,Q.remove t eK),
      ssub(M.singleton  x t2,s)|>M.add x t2, subK(M.singleton x t2,sK)|>Q.add t U)
-  | ((Tx x as t,t2)::eE,eK,s,sK) when not (List.mem x (ftv t2)) && not (Q.mem t eK) ->
+  | ((Tx x as t,t2)::eE,eK,s,sK) when not (S.mem x (ftv t2)) && not (Q.mem t eK) ->
     u1((t,t2)::eE,eK|>Q.add t U,s,sK)
   | ((TAll(t,eK,t1),t2)::eE,eK0,s,sK) -> u1((t1,t2)::eE,eK0|>Q.add (Tx t) eK,s,sK)
   (* (iii) record *)
@@ -236,7 +236,7 @@ let rec u1 : (eE * eK * sq * eK) -> (eE * eK * sq * eK) =
   (* (iv) record2 *)
   | ((Tx x1 as t1,(TRecord f2 as t2))::eE,eK0,s,sK) when
     (try match Q.find t1 eK0 with
-         | KRecord(f1) -> sub(dom(f1),dom(f2)) && not (List.mem x1 (ftv t2))
+         | KRecord(f1) -> sub(dom(f1),dom(f2)) && not (S.mem x1 (ftv t2))
          | _ -> false
      with _ -> false) ->
     let f1 = match Q.find t1 eK0 with KRecord f1 -> f1 | _ -> assert false in
@@ -258,7 +258,7 @@ let rec u1 : (eE * eK * sq * eK) -> (eE * eK * sq * eK) =
   (* (vii) variant2 *)
   | ((Tx x1 as t1,(TVariant f2 as t2))::eE,eK0,s,sK)
     when (try match Q.find t1 eK0 with
-              | KVariant f1 -> sub(dom f1, dom f2) && not (List.mem x1 (ftv t2))
+              | KVariant f1 -> sub(dom f1, dom f2) && not (S.mem x1 (ftv t2))
               | _ -> false with _ -> false) ->
     let f1 = match Q.find t1 eK0 with KVariant(f1) -> f1 | _ -> assert false in
     (subEq(M.singleton x1 t2,eE@((List.inter (dom f1) (dom f2))|>List.map(fun l->(List.assoc l f1,List.assoc l f2)))),
@@ -287,8 +287,8 @@ let cls : (eK * eT * q) -> (eK * q) =
   fun (eK, eT, t) -> match t with
   | TAll(x,k,t) -> (eK,TAll(x,k,t))
   | t ->
-    let ts = eftv(eK, t) |> List.delete (eftv(eK, TRecord(eT|>M.bindings))) in
-    let eK1 = eK |> Q.filter (function (Tx x) -> fun _ -> List.mem x ts | _ -> fun _ ->false) in
+    let ts = S.diff (eftv(eK, t)) (eftv(eK, TRecord(eT|>M.bindings))) in
+    let eK1 = eK |> Q.filter (function (Tx x) -> fun _ -> S.mem x ts | _ -> fun _ ->false) in
     (Q.diff eK eK1,
      Q.fold(function (Tx x) -> (fun k t -> TAll(x,k,t)) | _ -> (fun _ _ -> assert false)) eK1 t )
 

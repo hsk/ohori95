@@ -10,8 +10,8 @@ let parseM = Tmss_lexer.parseM
 let test_eftv () =
   "eftv" >::: [
     "a" >:: begin fun () ->
-      assert_equal(eftv(Q.of_list[Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t1")) ["t1"];
-      assert_equal(eftv(Q.of_list[Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t2")) ["t2";"t1"];
+      assert_equal(eftv(Q.of_list[Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t1")) (S.singleton "t1");
+      assert_equal(eftv(Q.of_list[Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t2")) (S.of_list["t2";"t1"]);
     end;
   ]
 
