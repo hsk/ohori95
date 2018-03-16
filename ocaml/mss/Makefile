@@ -5,7 +5,7 @@ all:
 	ocamllex src/tmss_lexer.mll
 	ocamlyacc src/ics_parser.mly
 	ocamllex src/ics_lexer.mll
-	ocamlfind ocamlc -g -o main -package oUnit -linkpkg -g \
+	ocamlfind ocamlc -g -o mss -package oUnit -linkpkg -g \
 	  -I src src/utils.ml \
 	  src/mss.ml src/mss_parser.mli src/mss_parser.ml src/mss_lexer.ml \
 	  src/tmss.ml src/tmss_parser.mli src/tmss_parser.ml src/tmss_lexer.ml \
@@ -16,10 +16,9 @@ all:
 		test/ics_parser_test.ml test/ics_test.ml \
 		test/all_test.ml
 	rm -rf src/*.cm* src/*_lexer.ml src/*_parser.ml src/*_parser.mli  test/*.cm* oUnit*
-	./main
+	./mss
 	rm -rf oUnit*
 clean:
-	rm -rf src/*.cm* src/*_lexer.ml src/*_parser.ml src/*_parser.mli  test/*.cm* oUnit* main
-
-.PHONY: test all run
+	rm -rf src/*.cm* src/*_lexer.ml src/*_parser.ml src/*_parser.mli  test/*.cm* oUnit* mss
+.PHONY: all clean
 
