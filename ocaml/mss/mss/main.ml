@@ -1,18 +1,19 @@
 open Mss_lexer
 open Tmss_lexer
 open Tmss
+open Utils
 
 let run src =
   Printf.printf "%s\n" "============";
   let e = parseE(src) in
   Printf.printf "%s\n" (Mss.show e);
   Tmss.reset();
-  let (k,s,m,t) = Tmss.wk([],[],e) in
+  let (k,s,m,t) = Tmss.wk(Q.empty,M.empty,e) in
   let (k1,t1) = Tmss.cls(k,s,t) in
   let m_ = Tmss.mtsub(s,m) in
   Printf.printf "%s\n" (show m_);
   Printf.printf "k=%s lk=%s\n" (show_eK k) (Ics.show_eL (Ics.lk k));
-  let c_ = Ics.c(Ics.lk(k),[],m_) in
+  let c_ = Ics.c(Ics.lk(k),M.empty,m_) in
   Printf.printf "%s\n" (Ics.show c_);
   Printf.printf "------------ eval %s\n" (Ics.show c_);
   Printf.printf "%s : %s\n" (Ics.show (Ics.eval(c_))) (show_q (Tmss.tsub(s,t1)));

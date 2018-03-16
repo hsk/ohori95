@@ -19,8 +19,8 @@ type e =
   | ECase of e * (l * e) list
   | ELet of x * e * e
 
-type s = (x * e) list
 type f = (x * e) list
+type s = e M.t
 
 let rec show : e -> string =
   function
@@ -54,8 +54,8 @@ let rec v : e -> bool =
 
 let rec esub : s -> e -> e =
   fun s -> function
-  | Ex(x) when List.mem_assoc x s -> esub s (List.assoc x s)
-  | EAbs(x, e) -> EAbs(x, esub (List.del_assoc x s) e)
+  | Ex(x) when M.mem x s -> esub s (M.find x s)
+  | EAbs(x, e) -> EAbs(x, esub (M.remove x s) e)
   | EApp(e1, e2) -> EApp(esub s e1, esub s e2)
   | ERecord(les) -> ERecord(les |> List.map(fun (l, e) -> (l, esub s e)))
   | EDot(e, l) -> EDot(esub s e, l)
@@ -85,7 +85,7 @@ let rec eval1 : e -> e =
   | EVariant(l, e) when not (v e) -> EVariant(l, eval1 e)
   | ECase(e, les) when not (v e) -> ECase(eval1 e, les)
 
-  | EApp(EAbs(x, e), v1) -> esub [x,v1] e
+  | EApp(EAbs(x, e), v1) -> esub (M.singleton x v1) e
   | EDot(ERecord(lvs), li) -> List.assoc li lvs
   | EModify(ERecord(lvs), li, v) ->
     let rec find hs = function
@@ -95,7 +95,7 @@ let rec eval1 : e -> e =
     in
     find [] lvs
   | ECase(EVariant(l, v), ls) -> EApp(List.assoc l ls, v)
-  | ELet(x, v, e) -> esub [x, v] e
+  | ELet(x, v, e) -> esub (M.singleton x v) e
   | e -> failwith "error"
 
 let rec eval : e -> e =

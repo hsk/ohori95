@@ -30,3 +30,23 @@ module List = struct
     | l::ls -> l::delete_assoc ys ls
   let keys ls = List.map fst ls
 end
+
+module MMake(Ord : Map.OrderedType) = struct
+  include Map.Make(Ord)
+  let of_list ls =
+    List.fold_left (fun m (k,v) -> add k v m) empty ls
+  let rec union a b = merge (fun key a b ->
+    match a,b with
+    | _,Some(b) -> Some(b)
+    | Some(a),_ -> Some(a)
+    | _ -> None ) a b
+  let keys l = l |> bindings |> List.map(fun(k,_)->k)
+  let diff xs ys = fold(fun k a b -> remove k b) ys xs
+  let add_list xs m = List.fold_left (fun m (k,v) -> add k v m) m xs
+end
+module M = MMake(String)
+module S = struct
+  include Set.Make(String)
+  let of_list ls =
+    List.fold_left (fun s v -> add v s) empty ls
+end

@@ -38,7 +38,7 @@ and show_cs cs =
 
 let rec kinding : (eK * q) -> k =
   fun (eK, q) -> match q with
-  | q when List.mem_assoc q eK -> List.assoc q eK
+  | q when Q.mem q eK -> Q.find q eK
   | TRecord(f) -> KRecord(f)
   | TVariant(f) -> KVariant(f)
   | _ -> U
@@ -56,9 +56,9 @@ let rec idxSet1(q:q):Set[(x,q)] = q match {
 *)
 let rec idxSetK : eK -> idxSet =
   fun eK ->
-  List.fold_left (fun is1 (t,k) ->
+  Q.fold (fun t k is1 ->
     List.union_assoc is1 (idxSet(t,k))
-  ) [] eK
+  ) eK []
 
 let rec sortf : ft -> ft =
   fun f ->
@@ -90,7 +90,7 @@ type eL = (x * (x * q)) list
 let rec getci : (eL * x * q) -> c =
   fun (eL, l, t) ->
   try
-    let idxs = idxSet(t, kinding([], t)) in
+    let idxs = idxSet(t, kinding(Q.empty, t)) in
     let rec find i = function
       | [] -> failwith "error"
       | (l1,t1)::ls when l = l1 && t = t1 -> CInt i
@@ -107,23 +107,23 @@ let rec c : (eL * eT * m) -> c =
   fun (eL,eT,m) -> match m with
   | Mx(x) -> Cx(x)
   | MTApp(Mx(x),ts) ->
-    let rec stripq : (q list * q) -> (x * q) list * q =
+    let rec stripq : (q list * q) -> sq * q =
       function
-      | ([],q) -> ([],q)
-      | (t::ts,TAll(x,_,q)) -> let (s,q_) = stripq(ts,q) in (List.union_assoc s [x,t], q_)
+      | ([],q) -> (M.empty,q)
+      | (t::ts,TAll(x,_,q)) -> let (s,q_) = stripq(ts, q) in (M.add x t s, q_)
       | (_,_) -> failwith ("assert stripq" (* +(q,ts) *))
     in
     let rec addApp : (eL * sq * q * c) -> c =
       fun (eL,s,q,c) -> match q with
-      | TIdx(l,t,t2) -> (addApp(eL,s,t2,CApp(c,getci(eL,l,tsub(s,t)))):c)
+      | TIdx(l,t,t2) -> addApp(eL,s,t2,CApp(c,getci(eL,l,tsub(s,t))))
       | _ -> c
     in
-    let (s,t) = stripq(ts,List.assoc x eT) in addApp(eL,s,t,Cx(x))
+    let (s,t) = stripq(ts,M.find x eT) in addApp(eL,s,t,Cx(x))
   | MTApp(_,_) -> assert false
   | MTrue -> CTrue
   | MFalse -> CFalse
   | MInt(i) -> CInt(i)
-  | MAbs(x,t,m) -> CAbs(x,c(eL,List.union_assoc eT [x,t],m))
+  | MAbs(x,t,m) -> CAbs(x,c(eL,M.add x t eT,m))
   | MApp(m1,m2) -> CApp(c(eL,eT,m1),c(eL,eT,m2))
   | MRecord(f) -> CRecord(f|>List.map(fun (_,m) -> c(eL,eT,m)))
   | MDot(m1,t,l) -> CDot(c(eL,eT,m1),getci(eL,l,t))
@@ -139,7 +139,7 @@ let rec c : (eL * eT * m) -> c =
     let (_,idxs) = sortq(addIdx(t)) in
     let (eL_,is) = getL(eL,idxs) in
     List.fold_right(fun x c ->CAbs(x,c)) is (c(eL_,eT,m1))
-  | MLet(x,q,m1,m2) -> CLet(x,c(eL,eT,m1),c(eL,List.union_assoc eT [x,addIdx(q)],m2))
+  | MLet(x,q,m1,m2) -> CLet(x,c(eL,eT,m1),c(eL,M.add x (addIdx q) eT,m2))
 
 let rec lk : eK -> eL =
   fun eK ->
@@ -161,19 +161,19 @@ let rec v : c -> bool =
   | CVariant(l,c) -> v(c)
   | _ -> false
 
-type sc = (x * c) list
+type sc = c M.t
 
 let rec csub : (sc * c) -> c =
   fun (s, c) -> match c with
-  | Cx(x) when List.mem_assoc x s -> csub(s,List.assoc x s)
-  | CAbs(x,c) -> CAbs(x,csub(List.del_assoc x s,c))
+  | Cx(x) when M.mem x s -> csub(s,M.find x s)
+  | CAbs(x,c) -> CAbs(x,csub(M.remove x s,c))
   | CApp(c1,c2) -> CApp(csub(s,c1),csub(s,c2))
   | CRecord(cs) -> CRecord(cs|>List.map(fun c->csub(s,c)))
   | CDot(c,l) -> CDot(csub(s,c),csub(s,l))
   | CModify(c1,l,c2) -> CModify(csub(s,c1),csub(s,l),csub(s,c2))
   | CVariant(l,c) -> CVariant(l,csub(s,c))
   | CSwitch(c,cs) -> CSwitch(csub(s,c),cs|>List.map(fun c->csub(s,c)))
-  | CLet(x,c1,c2) -> CLet(x,csub(s,c1),csub(List.del_assoc x s,c2))
+  | CLet(x,c1,c2) -> CLet(x,csub(s,c1),csub(M.remove x s,c2))
   | _ -> c
 
 let rec eval1 : c -> c =
@@ -195,7 +195,7 @@ let rec eval1 : c -> c =
   | CVariant(l,c) when not (v c) -> CVariant(l,eval1(c))
   | CSwitch(c,cs) when not (v c) -> CSwitch(eval1(c),cs)
 
-  | CApp(CAbs(x,c),v1) -> csub([x,v1],c)
+  | CApp(CAbs(x,c),v1) -> csub(M.singleton x v1,c)
   | CDot(CRecord(vs),CInt(i)) -> List.nth vs (i-1)
   | CModify(CRecord(vs),CInt(i),v) ->
     let rec find : (c list * i * c list) -> c =
@@ -206,7 +206,7 @@ let rec eval1 : c -> c =
     in
     find([],1,vs)
   | CSwitch(CVariant(CInt(li),v),ls) -> CApp(List.nth ls (li-1),v)
-  | CLet(x,v,c) -> csub([x,v],c)
+  | CLet(x,v,c) -> csub(M.singleton x v,c)
   | c -> failwith ("error")
 
 let rec eval : c -> c =

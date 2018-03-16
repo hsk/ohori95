@@ -1,25 +1,26 @@
 open OUnit
 open Mss
 open Mss_lexer
+open Utils
 
 let esub () =
   "esub" >::: [
     "cb" >:: begin fun () ->
-      assert_equal (esub ["x",Ex "y"] (parseE "1")) (parseE "1");
-      assert_equal (esub ["x",Ex "y"] (parseE "true")) (parseE "true");
-      assert_equal (esub ["x",Ex "y"] (parseE "false")) (parseE "false");
+      assert_equal (esub (M.singleton "x" (Ex "y")) (parseE "1")) (parseE "1");
+      assert_equal (esub (M.singleton "x" (Ex "y")) (parseE "true")) (parseE "true");
+      assert_equal (esub (M.singleton "x" (Ex "y")) (parseE "false")) (parseE "false");
     end;
     "x" >:: begin fun () ->
-      assert_equal (esub ["x",Ex "y"] (parseE "x")) (parseE "y");
-      assert_equal (esub ["x",Ex "y";"y",Ex "z"] (parseE "x")) (parseE "z");
-      assert_equal (esub ["y",Ex "z";"x",Ex "y"] (parseE "x")) (parseE "z");
-      assert_equal (esub ["x",Ex "y";"y",Ex "z"] (parseE "x")) (parseE "z");
-      assert_equal (esub ["y",Ex "z";"x",Ex "y"] (parseE "x")) (parseE "z");
+      assert_equal (esub (M.of_list ["x",Ex "y"]) (parseE "x")) (parseE "y");
+      assert_equal (esub (M.of_list ["x",Ex "y";"y",Ex "z"]) (parseE "x")) (parseE "z");
+      assert_equal (esub (M.of_list ["y",Ex "z";"x",Ex "y"]) (parseE "x")) (parseE "z");
+      assert_equal (esub (M.of_list ["x",Ex "y";"y",Ex "z"]) (parseE "x")) (parseE "z");
+      assert_equal (esub (M.of_list ["y",Ex "z";"x",Ex "y"]) (parseE "x")) (parseE "z");
     end;
     "λ" >:: begin fun () ->
-      assert_equal (esub ["x",Ex "y";"y",Ex "z"] (parseE "λx.x")) (parseE "λx.x");
-      assert_equal (esub ["x",Ex "y";"y",Ex "z"] (parseE "λa.x")) (parseE "λa.z");
-      assert_equal (esub ["y",Ex "z";"x",Ex "y"] (parseE "λa.x")) (parseE "λa.z");
+      assert_equal (esub (M.of_list ["x",Ex "y";"y",Ex "z"]) (parseE "λx.x")) (parseE "λx.x");
+      assert_equal (esub (M.of_list ["x",Ex "y";"y",Ex "z"]) (parseE "λa.x")) (parseE "λa.z");
+      assert_equal (esub (M.of_list ["y",Ex "z";"x",Ex "y"]) (parseE "λa.x")) (parseE "λa.z");
     end;
     (*
     todo:

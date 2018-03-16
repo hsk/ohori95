@@ -1,6 +1,7 @@
 open OUnit
 open Mss
 open Tmss
+open Utils
 let parseE = Mss_lexer.parseE
 let parsek = Tmss_lexer.parsek
 let parseq = Tmss_lexer.parseq
@@ -9,8 +10,8 @@ let parseM = Tmss_lexer.parseM
 let test_eftv () =
   "eftv" >::: [
     "a" >:: begin fun () ->
-      assert_equal(eftv([Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t1")) ["t1"];
-      assert_equal(eftv([Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t2")) ["t2";"t1"];
+      assert_equal(eftv(Q.of_list[Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t1")) ["t1"];
+      assert_equal(eftv(Q.of_list[Tx "t1",U;Tx "t2",parsek "{{l:t1}}"],parseq "t2")) ["t2";"t1"];
     end;
   ]
 
@@ -27,23 +28,24 @@ let test_cls () =
 let test_typing () =
   let test(e,em,t_) =
     reset();
-    let (k,s,m,t) = wk([],[],parseE(e)) in
+    let (k,s,m,t) = wk(Q.empty,M.empty,parseE(e)) in
     (*println("test k="+k+" t="+t)*)
-    let (_,t1) = cls(k,[],t) in
+    let (_,t1) = cls(k,M.empty,t) in
     (*println("test t1="+t1)*)
     let m_ = mtsub(s,m) in
+    Printf.printf "m=%s t1=%s\n" (Tmss.show m_) (show_q t1);
     assert_equal (parseM em) m_;
     assert_equal (parseq t_) t1;
   in
   let tesk(e,em,eq_,eK_) =
     reset();
-    let (k,s,m,t) = wk([],[],parseE e) in
-    let (_,t1) = cls(k,[],t) in
+    let (k,s,m,t) = wk(Q.empty,M.empty,parseE e) in
+    let (_,t1) = cls(k,M.empty,t) in
     let m_ = mtsub(s,m) in
-    (* Printf.printf "m=%s t1=%s\nek=%s\n" (Tmss.show m) (show_q t1) (show_eK k); *)
+    (*Printf.printf "m=%s t1=%s\nek=%s\n" (Tmss.show m) (show_q t1) (show_eK k);*)
     assert_equal (parseM em) m_;
     assert_equal (parseq eq_) t1;
-    assert_equal eK_ k;
+    assert_equal (Q.of_list eK_) k;
   in
   "typing" >::: [
     "int"  >:: begin fun () -> test("10",   "10",   "int") end;
@@ -74,7 +76,7 @@ let test_typing () =
     "record7" >:: begin fun () -> tesk(
       "λz.z#a",
       "λz:x2.z:x2#a",
-      "∀x1::U.∀x2::{{a:x1}}.x2->x1",
+      "∀x2::{{a:x1}}.∀x1::U.x2->x1",
       [Tx("x1"),U;Tx("x2"),parsek("{{a:x1}}")]) end;
     "record8" >:: begin fun () -> test(
       "modify((λz.{x=1,y=z}) 10,x,2)",
@@ -119,23 +121,21 @@ let test_typing () =
       "int") end;
     "let4" >:: begin fun () -> test(
       "let id=λx.λy.x in id 1 2",
-      "let id: ∀x0::U.∀x1::U.x0->x1->x0
-             =Poly((λx:x0.λy:x1.x) : ∀x0::U.∀x1::U.x0->x1->x0)
+      "let id: ∀x1::U.∀x0::U.x0->x1->x0
+             =Poly((λx:x0.λy:x1.x) : ∀x1::U.∀x0::U.x0->x1->x0)
        in (id!int!int) 1 2",
       "int") end;
     "let_poly" >:: begin fun () -> tesk(
       "let id = λx.x#a in id",
-      "let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
-         = Poly((λx:x2.x:x2#a) : ∀x1::U.∀x2::{{a:x1}}.x2->x1)
+      "let id: ∀x2::{{a:x1}}.∀x1::U.x2->x1
+         = Poly((λx:x2.x:x2#a) : ∀x2::{{a:x1}}.∀x1::U.x2->x1)
                        in id!x3!x4",
-      "∀x4::{{a:x3}}.∀x3::U.x4->x3",
-      [Tx("x4"),parsek("{{a:x3}}");Tx("x3"),U]) end;
+      "∀x4::U.∀x3::{{a:x4}}.x3->x4",
+      [Tx("x3"),parsek("{{a:x4}}");Tx("x4"),U;]) end;
     "let_poly2" >:: begin fun () -> test(
       "let id=λx.x#a in id {a=10,b=20}",
-      "let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
-               = Poly((λx:x2.x:x2#a) : ∀x1::U.∀x2::{{a:x1}}.x2->x1)
-                     in (id!int!{a:int,b:int}) {a=10,b=20}",
+      "let id: ∀x2::{{a:x1}}.∀x1::U.x2->x1
+               = Poly((λx:x2.x:x2#a) : ∀x2::{{a:x1}}.∀x1::U.x2->x1)
+                     in (id!{a:int,b:int}!int) {a=10,b=20}",
       "int") end;
   ]
-
-

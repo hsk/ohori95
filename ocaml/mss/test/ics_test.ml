@@ -1,4 +1,5 @@
 open OUnit
+open Utils
 open Mss
 open Tmss
 open Ics
@@ -14,21 +15,21 @@ import tmss._
 let test_csub () =
   "csub" >::: [
     "cb" >:: begin fun () ->
-      assert_equal(csub(["x",Cx("y")],parseC("1")))(parseC("1"));
-      assert_equal(csub(["x",Cx("y")],parseC("true")))(parseC("true"));
-      assert_equal(csub(["x",Cx("y")],parseC("false")))(parseC("false"));
+      assert_equal(csub(M.singleton "x" (Cx "y"),parseC("1")))(parseC("1"));
+      assert_equal(csub(M.singleton "x" (Cx "y"),parseC("true")))(parseC("true"));
+      assert_equal(csub(M.singleton "x" (Cx "y"),parseC("false")))(parseC("false"));
     end;
     "x" >:: begin fun () ->
-      assert_equal(csub(["x",Cx("y")],parseC("x")))(parseC("y"));
-      assert_equal(csub(["x",Cx("y");"y",Cx("z")],parseC("x")))(parseC("z"));
-      assert_equal(csub(["y",Cx("z");"x",Cx("y")],parseC("x")))(parseC("z"));
-      assert_equal(csub(["x",Cx("y");"y",Cx("z")],parseC("x")))(parseC("z"));
-      assert_equal(csub(["y",Cx("z");"x",Cx("y")],parseC("x")))(parseC("z"));
+      assert_equal(csub(M.of_list ["x",Cx("y")],parseC("x")))(parseC("y"));
+      assert_equal(csub(M.of_list ["x",Cx("y");"y",Cx("z")],parseC("x")))(parseC("z"));
+      assert_equal(csub(M.of_list ["y",Cx("z");"x",Cx("y")],parseC("x")))(parseC("z"));
+      assert_equal(csub(M.of_list ["x",Cx("y");"y",Cx("z")],parseC("x")))(parseC("z"));
+      assert_equal(csub(M.of_list ["y",Cx("z");"x",Cx("y")],parseC("x")))(parseC("z"));
     end;
     "λ" >:: begin fun () ->
-      assert_equal(csub(["x",Cx("y");"y",Cx("z")],parseC("λx.x")))(parseC("λx.x"));
-      assert_equal(csub(["x",Cx("y");"y",Cx("z")],parseC("λa.x")))(parseC("λa.z"));
-      assert_equal(csub(["y",Cx("z");"x",Cx("y")],parseC("λa.x")))(parseC("λa.z"));
+      assert_equal(csub(M.of_list ["x",Cx("y");"y",Cx("z")],parseC("λx.x")))(parseC("λx.x"));
+      assert_equal(csub(M.of_list ["x",Cx("y");"y",Cx("z")],parseC("λa.x")))(parseC("λa.z"));
+      assert_equal(csub(M.of_list ["y",Cx("z");"x",Cx("y")],parseC("λa.x")))(parseC("λa.z"));
     end;
   ]
 let test_eval () =
@@ -127,10 +128,10 @@ let test_rep () =
   ]
 let test_compile () =
   let test((e:x), (m:x), (t:x), (cx:x)) =
-    assert_equal(parseC(cx))(c([],[],parseM(m)))
+    assert_equal(parseC(cx))(c([],M.empty,parseM(m)))
   in
   let tesk((e:x), (m:x), (t:x), (eK:(q * k) list), (cx:x)) =
-    assert_equal(parseC(cx))(c(lk(eK),[],parseM(m)))
+    assert_equal(parseC(cx))(c(lk(Q.of_list eK),M.empty,parseM(m)))
   in
   "compile" >::: [
     "int"      >:: begin fun () -> test("10",   "10"   ,"int" ,"10") end;
@@ -225,8 +226,8 @@ let test_compile () =
     "let_poly2" >:: begin fun () ->
       resetn(3);
       test("let id=λx.x#a in id {a=10,b=20}",
-           "let id: ∀x1::U.∀x2::{{a:x1}}.x2->x1
-                  =Poly((λx:x2.x:x2#a): ∀x1::U.∀x2::{{a:x1}}.x2->x1) in
-                  id!int!{a:int,b:int} {a=10,b=20}","int",
+           "let id: ∀x2::{{a:x1}}.∀x1::U.x2->x1
+                  =Poly((λx:x2.x:x2#a): ∀x2::{{a:x1}}.∀x1::U.x2->x1) in
+                  id!{a:int,b:int}!int {a=10,b=20}","int",
            "let id=λx3.λx.x[x3] in id 1 {10,20}") end;
   ]
